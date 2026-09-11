@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# Environment
+.env
+venv/
+.venv/
+env/
+
+# Data (cached downloads & outputs - can be large)
+data/cache/*
+!data/cache/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+
+# Model weights cache (downloaded automatically or trained locally)
+weights/
+*.ckpt
+*.pt
+*.pth
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files
+outputs/
+*.tif
+!data/samples/*.tif
