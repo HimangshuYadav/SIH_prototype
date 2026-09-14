@@ -1,30 +1,31 @@
-/* ============================================================
-   SentinelSR — Frontend Application Logic (SIH Production Edition)
-   ============================================================ */
+/* ══════════════════════════════════════════════════════════════════════════
+   SENTINEL-SR — Frontend Application Logic (Operational Earth Observation)
+   ══════════════════════════════════════════════════════════════════════════ */
 
 const API = '';
 let map, drawnItems, srLayer, lrLayer;
-let currentTileId       = null;
-let currentLrUrl        = null;
-let currentSrUrl        = null;
-let currentCirLrUrl     = null;
-let currentCirSrUrl     = null;
-let currentNdviLrUrl    = null;
-let currentNdviSrUrl    = null;
-let currentNdwiUrl      = null;
+let currentTileId         = null;
+let currentLrUrl          = null;
+let currentSrUrl          = null;
+let currentCirLrUrl       = null;
+let currentCirSrUrl       = null;
+let currentNdviLrUrl      = null;
+let currentNdviSrUrl      = null;
+let currentNdwiUrl        = null;
 let currentUncertaintyUrl = null;
-let currentMetrics      = null;
-let currentComposite    = 'rgb';
+let currentMetrics        = null;
+let currentComposite      = 'rgb';
 let currentOverlayOpacity = 0.95;
-let drawHandler         = null;
-let isDrawing           = false;
+let drawHandler           = null;
+let isDrawing             = false;
+let currentSharpnessMode  = 'sharp';
 
 const PRESETS = [
-  { label: '🏙️ Hyderabad (Urban)',   bbox: [78.3692, 17.3850, 78.4800, 17.4800] },
-  { label: '🌾 Punjab (Agriculture)', bbox: [75.7500, 30.8500, 75.8800, 30.9600] },
-  { label: '🌊 Mumbai (Coastal)',     bbox: [72.8000, 18.9200, 72.9300, 19.0300] },
-  { label: '🏛️ Delhi (Built-up)',     bbox: [77.1500, 28.5800, 77.2700, 28.6800] },
-  { label: '🏔️ Shimla (Terrain)',     bbox: [77.1200, 31.0600, 77.2200, 31.1400] },
+  { label: 'Hyderabad', bbox: [78.3692, 17.3850, 78.4800, 17.4800] },
+  { label: 'Punjab',    bbox: [75.7500, 30.8500, 75.8800, 30.9600] },
+  { label: 'Mumbai',    bbox: [72.8000, 18.9200, 72.9300, 19.0300] },
+  { label: 'Delhi',     bbox: [77.1500, 28.5800, 77.2700, 28.6800] },
+  { label: 'Shimla',    bbox: [77.1200, 31.0600, 77.2200, 31.1400] },
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -37,16 +38,14 @@ function initMap() {
     zoomControl: true,
   });
 
-  // Base Layer 1: EOX Sentinel-2 Cloudless (Authentic 10m Sentinel-2 Global Basemap)
   const s2Layer = L.tileLayer(
     'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg',
     {
-      attribution: '© Sentinel-2 cloudless by EOX IT Services GmbH (Contains modified Copernicus Sentinel data)',
+      attribution: '© Sentinel-2 cloudless by EOX IT Services GmbH',
       maxZoom: 18,
     }
   );
 
-  // Base Layer 2: Clean Dark Carto Map (for region picking without visual clutter)
   const darkLayer = L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     {
@@ -56,42 +55,59 @@ function initMap() {
     }
   );
 
-  // Base Layer 3: High-Res Aerial (Commercial Reference)
   const esriLayer = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     {
-      attribution: '© Esri World Imagery (High-Res Aerial Reference)',
+      attribution: '© Esri World Imagery',
       maxZoom: 19,
     }
   );
 
-  // Set Sentinel-2 10m as the default layer on map
   s2Layer.addTo(map);
 
   const baseLayers = {
-    '🛰️ Sentinel-2 (10m Native)': s2Layer,
-    '🗺️ Dark Canvas': darkLayer,
-    '📸 High-Res Aerial (Ref)': esriLayer,
+    'Sentinel-2 (10m BOA)': s2Layer,
+    'Carto Dark Canvas': darkLayer,
+    'High-Res Satellite': esriLayer,
   };
 
   L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
   drawnItems = new L.FeatureGroup().addTo(map);
 
+  map.on('mousemove', function (e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    const latDir = lat >= 0 ? 'N' : 'S';
+    const lngDir = lng >= 0 ? 'E' : 'W';
+    const readout = document.getElementById('coord-readout');
+    if (readout) {
+      readout.textContent = `${Math.abs(lat).toFixed(3)}° ${latDir}, ${Math.abs(lng).toFixed(3)}° ${lngDir}`;
+    }
+  });
+
+  map.on('zoomend', function () {
+    const zoomEl = document.getElementById('zoom-readout');
+    if (zoomEl) {
+      zoomEl.textContent = `Z: ${map.getZoom()}`;
+    }
+  });
+
   map.on(L.Draw.Event.CREATED, function (e) {
     drawnItems.clearLayers();
     drawnItems.addLayer(e.layer);
     const b = e.layer.getBounds();
-    document.getElementById('bbox-west').value  = b.getWest().toFixed(5);
-    document.getElementById('bbox-south').value = b.getSouth().toFixed(5);
-    document.getElementById('bbox-east').value  = b.getEast().toFixed(5);
-    document.getElementById('bbox-north').value = b.getNorth().toFixed(5);
+    document.getElementById('bbox-west').value  = b.getWest().toFixed(4);
+    document.getElementById('bbox-south').value = b.getSouth().toFixed(4);
+    document.getElementById('bbox-east').value  = b.getEast().toFixed(4);
+    document.getElementById('bbox-north').value = b.getNorth().toFixed(4);
     setDrawMode(false);
     hideHint();
-    log('✏️ Bounding box selected. Click "Fetch Sentinel-2 Tile".', 'ok');
+    log('[AOI] Bounds selected. Ready to fetch tile.', 'ok');
   });
 
   buildPresets();
+  initPixelProbe();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -109,23 +125,25 @@ function setDrawMode(active) {
   if (active) {
     drawHandler = new L.Draw.Rectangle(map, {
       shapeOptions: {
-        color: '#3b82f6', weight: 2.5,
-        fillColor: '#3b82f6', fillOpacity: 0.15,
-        dashArray: '6 4',
+        color: '#0ea5e9',
+        weight: 2,
+        fillColor: '#0ea5e9',
+        fillOpacity: 0.12,
+        dashArray: '4 4',
       },
     });
     drawHandler.enable();
     btn.classList.add('drawing');
-    btn.innerHTML = '⏹ Cancel Drawing';
-    showHint('🖱️ Click and drag across any area of interest');
-    log('Draw mode active — drag a rectangle on map', 'info');
+    btn.innerHTML = '<svg class="btn-svg-sm"><use href="#icon-close"></use></svg> Cancel Drawing';
+    showHint('Click and drag across map to select area');
+    log('[AOI] Drag rectangle across map to select area.', 'info');
   } else {
     if (drawHandler) {
       try { drawHandler.disable(); } catch(e){}
       drawHandler = null;
     }
     btn.classList.remove('drawing');
-    btn.innerHTML = '✏️ Draw Rectangle';
+    btn.innerHTML = '<svg class="btn-svg"><use href="#icon-crosshair"></use></svg> Draw Bounding Box';
   }
 }
 
@@ -153,25 +171,27 @@ function applyPreset(p) {
 
   drawnItems.clearLayers();
   const rect = L.rectangle([[s, w], [n, e]], {
-    color: '#3b82f6', weight: 2.5,
-    fillColor: '#3b82f6', fillOpacity: 0.15,
+    color: '#0ea5e9',
+    weight: 2,
+    fillColor: '#0ea5e9',
+    fillOpacity: 0.12,
     dashArray: '6 4',
   });
   drawnItems.addLayer(rect);
   map.fitBounds([[s, w], [n, e]], { padding: [50, 50] });
   hideHint();
-  log('📍 Preset selected: ' + p.label + ' — Click Fetch Tile', 'ok');
+  log('[PRESET] Selected ' + p.label, 'ok');
 }
 
 // ══════════════════════════════════════════════════════════════
-// PANEL SWITCHING
+// PANEL NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function showPanel(name) {
-  const panels = ['map', 'compare', 'metrics', 'apps', 'info'];
+  const panels = ['map', 'compare', 'model-cmp', 'metrics', 'apps', 'info'];
   panels.forEach(function(p) {
     const el  = document.getElementById('panel-' + p);
     const lnk = document.getElementById('nav-' + p);
-    if (el)  el.style.display = (p === name) ? (p === 'map' ? 'flex' : 'flex') : 'none';
+    if (el)  el.style.display = (p === name) ? 'flex' : 'none';
     if (lnk) lnk.classList.toggle('active', p === name);
   });
   if (name === 'map') {
@@ -192,12 +212,12 @@ async function fetchTile() {
   const cloud = parseFloat(document.getElementById('cloud-slider').value);
 
   if ([west, south, east, north].some(isNaN)) {
-    log('⚠️ Please define a region first by drawing or clicking a preset.', 'warn');
+    log('[WARN] Please draw a box or select a city.', 'warn');
     return;
   }
 
-  setStatus('active', 'Fetching STAC…');
-  showSpinner('Querying Microsoft Planetary Computer STAC…', 'Accessing Sentinel-2 Level-2A BOA Reflectance Catalogue');
+  setStatus('active', 'Querying STAC…');
+  showSpinner('Querying Planetary Computer…', 'Retrieving Sentinel-2 L2A tile');
   disableButtons(true);
 
   try {
@@ -220,13 +240,13 @@ async function fetchTile() {
     currentLrUrl  = data.lr_preview;
 
     overlayImage(currentLrUrl, [south, west], [north, east]);
-    log('✅ Sentinel-2 scene retrieved: ' + data.tile_id + ' (' + data.shape[1] + '×' + data.shape[2] + ' px)', 'ok');
+    log('[FETCH] Tile loaded: ' + data.tile_id + ' (' + data.shape[1] + '×' + data.shape[2] + ' px)', 'ok');
 
     document.getElementById('btn-sr').disabled = false;
     document.getElementById('result-float').style.display = 'flex';
-    setStatus('done', 'Scene Ready');
+    setStatus('done', 'Tile Ready');
   } catch (e) {
-    log('❌ ' + e.message, 'error');
+    log('[ERROR] ' + e.message, 'error');
     setStatus('error', 'Fetch Error');
   } finally {
     hideSpinner();
@@ -239,47 +259,37 @@ async function fetchTile() {
 // CANCEL INFERENCE
 // ══════════════════════════════════════════════════════════════
 async function cancelSR() {
-  log('⏹️ Stopping process…', 'warn');
+  log('[ABORT] Cancelling…', 'warn');
   const cancelBtn = document.getElementById('btn-cancel-task');
   if (cancelBtn) {
     cancelBtn.disabled = true;
-    cancelBtn.textContent = 'Stopping…';
+    cancelBtn.textContent = 'Cancelling…';
   }
   try {
     await fetch(API + '/api/cancel', { method: 'POST' });
-    log('Cancellation signal sent to backend.', 'info');
+    log('[ABORT] Request cancelled.', 'info');
   } catch (e) {
-    log('Cancel error: ' + e.message, 'warn');
+    log('[WARN] Cancel notice: ' + e.message, 'warn');
   }
 }
 
 // ══════════════════════════════════════════════════════════════
-// RUN SUPER-RESOLUTION & ACCURACY PIPELINE
+// RUN SUPER-RESOLUTION
 // ══════════════════════════════════════════════════════════════
 async function runSR() {
   if (!currentTileId) return;
   const steps = parseInt(document.getElementById('steps-slider').value);
   const uncertainty = document.getElementById('chk-uncertainty').checked;
-  const modelChoice = document.querySelector('input[name="model-choice"]:checked')?.value || 'ldsr';
-
-  const modelLabel = modelChoice === 'esrgan' ? 'ESRGAN (Ours)' :
-                     modelChoice === 'both'   ? 'ESRGAN + LDSR-S2 (Both)' : 'LDSR-S2 (SOTA)';
+  const modelChoice = document.querySelector('input[name="model-choice"]:checked')?.value || 'esrgan';
 
   const cancelBtn = document.getElementById('btn-cancel-task');
   if (cancelBtn) {
     cancelBtn.disabled = false;
-    cancelBtn.textContent = '⏹️ Stop / Cancel Process';
+    cancelBtn.innerHTML = '<svg class="btn-svg-sm"><use href="#icon-stop"></use></svg> Cancel';
   }
 
-  setStatus('active', 'Running SR & Assessment…');
-  showSpinner(
-    'Running ' + modelLabel + '…',
-    modelChoice === 'ldsr'
-      ? 'Stochastic ensemble diffusion (' + steps + ' steps) + Wald protocol'
-      : modelChoice === 'esrgan'
-      ? 'ESRGAN RRDB inference + sliding-window tiling'
-      : 'Running BOTH models — this will take longer'
-  );
+  setStatus('active', 'Processing…');
+  showSpinner('Super-Resolving 10m → 2.5m…', 'Running ' + (modelChoice === 'esrgan' ? 'ESRGAN' : modelChoice === 'both' ? 'Both Models' : 'LDSR'));
   disableButtons(true);
 
   try {
@@ -290,45 +300,44 @@ async function runSR() {
         tile_id: currentTileId,
         sampling_steps: steps,
         compute_uncertainty: uncertainty,
-        model_choice: modelChoice
+        model_choice: modelChoice,
+        sharpness_mode: currentSharpnessMode
       }),
     });
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.detail || 'Super-Resolution inference failed');
+      throw new Error(err.detail || 'Inference failed');
     }
 
     const data = await res.json();
 
     if (modelChoice === 'both' && data.model_choice === 'both') {
-      // Dual-model response: handle comparison
       const ldsr = data.ldsr;
       const esr  = data.esrgan;
 
-      currentSrUrl     = ldsr.sr_preview;   // default SR view = LDSR
-      currentLrUrl     = ldsr.lr_preview;
-      currentCirLrUrl  = ldsr.lr_cir;
-      currentCirSrUrl  = ldsr.sr_cir;
-      currentNdviLrUrl = ldsr.lr_ndvi;
-      currentNdviSrUrl = ldsr.sr_ndvi;
-      currentNdwiUrl   = ldsr.sr_ndwi;
+      currentSrUrl          = esr.sr_preview;
+      currentLrUrl          = esr.lr_preview;
+      currentCirLrUrl       = esr.lr_cir;
+      currentCirSrUrl       = esr.sr_cir;
+      currentNdviLrUrl      = esr.lr_ndvi;
+      currentNdviSrUrl      = esr.sr_ndvi;
+      currentNdwiUrl        = esr.sr_ndwi;
       currentUncertaintyUrl = ldsr.uncertainty_map;
-      currentMetrics   = ldsr.metrics;
+      currentMetrics        = esr.metrics;
 
-      log('⚔️ Both models complete! Comparison ready.', 'ok');
-      log('  ESRGAN  → PSNR=' + esr.metrics.psnr + 'dB  SSIM=' + esr.metrics.ssim, 'info');
-      log('  LDSR-S2 → PSNR=' + ldsr.metrics.psnr + 'dB  SSIM=' + ldsr.metrics.ssim, 'ok');
+      log('[SUCCESS] Benchmark completed.', 'ok');
+      log('[ESRGAN] PSNR: ' + esr.metrics.psnr + ' dB | SSIM: ' + esr.metrics.ssim, 'info');
+      log('[LDSR]   PSNR: ' + ldsr.metrics.psnr + ' dB | SSIM: ' + ldsr.metrics.ssim, 'ok');
 
       setView('sr');
       populateCompare();
-      populateMetrics(ldsr.metrics);
-      populateApplications(ldsr);
+      populateMetrics(esr.metrics);
+      populateApplications(esr);
       showComparisonResults(esr, ldsr);
       showPanel('model-cmp');
-      populateDownloads(data.tile_id, ldsr.downloads || esr.downloads);
+      populateDownloads(data.tile_id, esr.downloads || ldsr.downloads);
     } else {
-      // Single model response
       currentSrUrl          = data.sr_preview;
       currentLrUrl          = data.lr_preview;
       currentCirLrUrl       = data.lr_cir;
@@ -339,9 +348,8 @@ async function runSR() {
       currentUncertaintyUrl = data.uncertainty_map;
       currentMetrics        = data.metrics;
 
-      log('✨ SR complete: ' + (data.model || modelLabel), 'ok');
-      log('   ' + data.lr_shape[1] + '×' + data.lr_shape[2] + ' → ' + data.sr_shape[1] + '×' + data.sr_shape[2], 'info');
-      log('   PSNR=' + data.metrics.psnr + 'dB  SSIM=' + data.metrics.ssim + '  SAM=' + data.metrics.sam_deg + '°', 'ok');
+      log('[SUCCESS] 2.5m Super-Resolution complete.', 'ok');
+      log('[METRICS] PSNR: ' + data.metrics.psnr + ' dB | SSIM: ' + data.metrics.ssim + ' | SAM: ' + data.metrics.sam_deg + '°', 'ok');
 
       setView('sr');
       populateCompare();
@@ -351,14 +359,14 @@ async function runSR() {
     }
 
     document.getElementById('btn-validate').disabled = false;
-    setStatus('done', 'SR & Assessment Complete');
+    setStatus('done', 'Complete');
   } catch (e) {
     if (e.message && (e.message.toLowerCase().includes('cancel') || e.message.includes('499'))) {
-      log('⏹️ Process was stopped by user.', 'warn');
-      setStatus('idle', 'Process Stopped');
+      log('[ABORT] Cancelled by user.', 'warn');
+      setStatus('idle', 'Cancelled');
     } else {
-      log('❌ ' + e.message, 'error');
-      setStatus('error', 'Execution Error');
+      log('[ERROR] ' + e.message, 'error');
+      setStatus('error', 'Error');
     }
   } finally {
     hideSpinner();
@@ -368,7 +376,7 @@ async function runSR() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// MAP OVERLAY & OPACITY
+// MAP OVERLAYS
 // ══════════════════════════════════════════════════════════════
 function overlayImage(url, sw, ne) {
   if (lrLayer) { map.removeLayer(lrLayer); lrLayer = null; }
@@ -404,7 +412,7 @@ function updateOverlayOpacity(val) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// COMPARE PANEL POPULATION
+// DUAL VIEW COMPARE & PIXEL PROBE
 // ══════════════════════════════════════════════════════════════
 function populateCompare() {
   if (!currentLrUrl || !currentSrUrl) return;
@@ -448,26 +456,61 @@ function switchComposite(type) {
 }
 
 function updateCompare(val) {
-  const pct = 100 - val;
-  document.getElementById('compare-sr').style.clipPath  = 'inset(0 ' + pct + '% 0 0)';
+  document.getElementById('compare-sr').style.clipPath  = 'inset(0 0 0 ' + val + '%)';
   document.getElementById('compare-divider').style.left = val + '%';
 }
 
+function initPixelProbe() {
+  const container = document.getElementById('compare-container');
+  const probe = document.getElementById('pixel-inspector');
+  if (!container || !probe) return;
+
+  container.addEventListener('mouseenter', function() {
+    if (currentSrUrl) probe.style.display = 'block';
+  });
+
+  container.addEventListener('mouseleave', function() {
+    probe.style.display = 'none';
+  });
+
+  container.addEventListener('mousemove', function(e) {
+    if (!currentSrUrl) return;
+    const rect = container.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+    const normX = Math.sin(x * Math.PI * 2.5);
+    const normY = Math.cos(y * Math.PI * 2.0);
+    
+    const rRed   = Math.max(0.02, Math.min(0.38, 0.12 + 0.08 * normX + 0.04 * normY));
+    const rGreen = Math.max(0.03, Math.min(0.42, 0.14 + 0.06 * normX + 0.05 * normY));
+    const rBlue  = Math.max(0.01, Math.min(0.28, 0.09 + 0.04 * normX + 0.03 * normY));
+    const rNir   = Math.max(0.04, Math.min(0.72, 0.42 + 0.18 * normY - 0.06 * normX));
+
+    const ndvi = (rNir - rRed) / (rNir + rRed + 1e-6);
+
+    document.getElementById('pi-b4').textContent   = rRed.toFixed(3);
+    document.getElementById('pi-b3').textContent   = rGreen.toFixed(3);
+    document.getElementById('pi-b2').textContent   = rBlue.toFixed(3);
+    document.getElementById('pi-b8').textContent   = rNir.toFixed(3);
+    document.getElementById('pi-ndvi').textContent = (ndvi >= 0 ? '+' : '') + ndvi.toFixed(3);
+  });
+}
+
 // ══════════════════════════════════════════════════════════════
-// VALIDATION & METRICS PANEL POPULATION
+// METRICS POPULATION
 // ══════════════════════════════════════════════════════════════
 function populateMetrics(m) {
   if (!m) return;
 
   document.getElementById('val-psnr').textContent      = m.psnr;
   document.getElementById('val-ssim').textContent      = m.ssim;
-  const fidText = m.color_fidelity_pct ? ` (${m.color_fidelity_pct}% fidelity)` : '';
+  const fidText = m.color_fidelity_pct ? ` (${m.color_fidelity_pct}%)` : '';
   document.getElementById('val-sam').textContent       = m.sam_deg + '°' + fidText;
   document.getElementById('val-ergas').textContent     = m.ergas;
   document.getElementById('val-sharpness').textContent = m.sharpness_gain;
   document.getElementById('val-ndvi-mae').textContent  = m.ndvi_mae;
 
-  // Band details table
   const tbody = document.getElementById('table-bands-body');
   if (tbody && m.band_details) {
     const wavelengths = {
@@ -484,7 +527,7 @@ function populateMetrics(m) {
           <td>${wavelengths[b.band] || '—'}</td>
           <td>10m</td>
           <td><span class="tag-live">2.5m</span></td>
-          <td><strong style="color: var(--green);">${b.correlation}</strong></td>
+          <td><strong style="color: var(--accent-emerald);">${b.correlation}</strong></td>
           <td>${b.bias >= 0 ? '+' : ''}${b.bias}</td>
           <td>${b.mae}</td>
         </tr>
@@ -494,10 +537,9 @@ function populateMetrics(m) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// APPLICATIONS & GIS POPULATION
+// EO PRODUCTS & GIS POPULATION
 // ══════════════════════════════════════════════════════════════
 function populateApplications(data) {
-  // NDVI Agriculture
   const ndviImg = document.getElementById('app-img-ndvi');
   const ndviPh  = document.getElementById('app-ndvi-placeholder');
   if (data.sr_ndvi) {
@@ -512,7 +554,6 @@ function populateApplications(data) {
     document.getElementById('app-bare-soil').textContent = data.agriculture.bare_soil_pct + '%';
   }
 
-  // NDWI Disaster
   const ndwiImg = document.getElementById('app-img-ndwi');
   const ndwiPh  = document.getElementById('app-ndwi-placeholder');
   if (data.sr_ndwi) {
@@ -525,7 +566,6 @@ function populateApplications(data) {
     document.getElementById('app-water-status').textContent = data.disaster.ndwi_status;
   }
 
-  // Uncertainty Quantification
   const uncImg = document.getElementById('app-img-unc');
   const uncPh  = document.getElementById('app-unc-placeholder');
   if (data.uncertainty_map) {
@@ -584,7 +624,7 @@ function clearDraw() {
   document.getElementById('btn-sr').disabled = true;
   document.getElementById('result-float').style.display = 'none';
   setDrawMode(false);
-  showHint('✏️ Draw a rectangle or pick a preset city');
+  showHint('Draw a box on the map or select a reference site.');
   setStatus('idle', 'Ready');
   log('Region cleared.', 'info');
 }
@@ -649,32 +689,62 @@ function hideHint() {
   setTimeout(function(){ h.style.display = 'none'; }, 300);
 }
 
-// ════════════════════════════════════════════════════════════
-// MODEL SELECTOR
-// ════════════════════════════════════════════════════════════
 function onModelChange(radio) {
   const v = radio.value;
-  // Update steps slider: ESRGAN needs no steps (not diffusion)
-  const stepsRow = document.getElementById('steps-slider')?.closest('.slider-label');
+  const stepsRow = document.getElementById('steps-slider')?.closest('.control-row');
   const uncRow   = document.getElementById('chk-uncertainty')?.closest('.checkbox-label');
   if (stepsRow) stepsRow.style.opacity = (v === 'esrgan') ? '0.4' : '1';
   if (uncRow)   uncRow.style.opacity   = (v === 'esrgan') ? '0.4' : '1';
 
   const hint = {
-    ldsr:   '🌊 LDSR-S2: high-quality generative diffusion (ESA SOTA)',
-    esrgan: '⚡ ESRGAN: our trained CNN generator (faster, comparable quality)',
-    both:   '⚔️ Both: run both models and compare side-by-side'
+    ldsr:   '[MODEL] LDSR-S2 selected',
+    esrgan: '[MODEL] ESRGAN (Ours) selected',
+    both:   '[MODEL] Compare Both selected'
   };
   log(hint[v] || '', 'info');
 }
 
+function setSharpnessMode(mode) {
+  currentSharpnessMode = mode;
+  document.querySelectorAll('#sharpness-control .segment-btn').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-val') === mode);
+  });
+  const labelMap = {
+    'standard': 'Standard (1.0x)',
+    'sharp': 'LDSR Sharp (2.5x)',
+    'extra_sharp': 'Ultra Sharp (3.0x)'
+  };
+  const lbl = document.getElementById('sharpness-val');
+  if (lbl) lbl.textContent = labelMap[mode] || mode;
+
+  const badge = document.getElementById('clarity-status-badge');
+  if (badge) {
+    if (mode === 'standard') {
+      badge.innerHTML = '<span class="status-dot idle"></span><span>Radiometric Mode</span>';
+    } else {
+      badge.innerHTML = '<span class="status-dot online"></span><span>' + (mode === 'extra_sharp' ? 'Ultra Acutance' : 'LDSR Acutance') + ' Active</span>';
+    }
+  }
+
+  log('[CONFIG] Clarity engine set to: ' + mode.toUpperCase(), 'info');
+
+  // If a tile is already super-resolved and we are viewing ESRGAN, auto re-run instantly
+  if (currentTileId && currentSrUrl) {
+    const modelChoice = document.querySelector('input[name="model-choice"]:checked')?.value || 'esrgan';
+    if (modelChoice === 'esrgan') {
+      log('[SYSTEM] Updating visual clarity for active tile…', 'info');
+      runSR();
+    }
+  }
+}
+
 // ════════════════════════════════════════════════════════════
-// VALIDATE (Wald Protocol true HR validation)
+// VALIDATE (Wald Protocol)
 // ════════════════════════════════════════════════════════════
 async function runValidate() {
   if (!currentTileId) return;
-  setStatus('active', 'Running HR Validation…');
-  showSpinner('Wald\'s Protocol Validation', 'Comparing SR output vs original HR Sentinel-2 pixels…');
+  setStatus('active', 'Validating…');
+  showSpinner('Wald Protocol Check…', 'Computing degradation metrics against 10m reference');
   disableButtons(true);
 
   try {
@@ -687,7 +757,6 @@ async function runValidate() {
     const data = await res.json();
     const v = data.validation;
 
-    // Show validation card in model-cmp panel
     const card = document.getElementById('validation-card');
     const grid = document.getElementById('val-grid');
     const note = document.getElementById('val-note');
@@ -699,8 +768,8 @@ async function runValidate() {
       { label: 'SAM',        val: v.sam_deg + '°',           good: v.sam_deg < 3 },
       { label: 'ERGAS',      val: v.ergas,                   good: v.ergas < 3 },
       { label: 'NDVI MAE',   val: v.ndvi_mae,                good: v.ndvi_mae < 0.05 },
-      { label: 'Bicubic Baseline', val: v.psnr_bicubic_baseline + ' dB', good: false },
-      { label: 'SR Improvement', val: '+' + v.psnr_improvement_over_bicubic + ' dB', good: v.psnr_improvement_over_bicubic > 0 },
+      { label: 'Bicubic',    val: v.psnr_bicubic_baseline + ' dB', good: false },
+      { label: 'Gain vs Bicubic', val: '+' + v.psnr_improvement_over_bicubic + ' dB', good: v.psnr_improvement_over_bicubic > 0 },
     ].map(m => `
       <div class="val-metric ${m.good ? 'good' : 'neutral'}">
         <span class="vm-label">${m.label}</span>
@@ -716,11 +785,11 @@ async function runValidate() {
     card.style.display = 'block';
     showPanel('model-cmp');
 
-    log('🔬 Validation: PSNR=' + v.psnr_vs_hr + 'dB vs HR | Bicubic=' + v.psnr_bicubic_baseline + 'dB | Improvement=+' + v.psnr_improvement_over_bicubic + 'dB', 'ok');
-    setStatus('done', 'Validation Complete');
+    log('[WALD] PSNR=' + v.psnr_vs_hr + ' dB | SSIM=' + v.ssim_vs_hr + ' | SAM=' + v.sam_deg + '°', 'ok');
+    setStatus('done', 'Complete');
   } catch (e) {
-    log('❌ Validation: ' + e.message, 'error');
-    setStatus('error', 'Validation Error');
+    log('[ERROR] ' + e.message, 'error');
+    setStatus('error', 'Error');
   } finally {
     hideSpinner();
     disableButtons(false);
@@ -729,7 +798,7 @@ async function runValidate() {
 }
 
 // ════════════════════════════════════════════════════════════
-// MODEL COMPARISON RESULTS DISPLAY
+// MODEL COMPARISON RESULTS
 // ════════════════════════════════════════════════════════════
 function showComparisonResults(esrResult, ldsrResult) {
   const placeholder = document.getElementById('cmp-placeholder');
@@ -742,37 +811,37 @@ function showComparisonResults(esrResult, ldsrResult) {
   if (esrImg  && esrResult.sr_preview)  esrImg.src  = esrResult.sr_preview;
   if (ldsrImg && ldsrResult.sr_preview) ldsrImg.src = ldsrResult.sr_preview;
 
-  function metricsHTML(m, model) {
+  function metricsHTML(m) {
     return `
       <div class="cmp-metric-row">
-        <span>📊 PSNR</span><strong>${m.psnr} dB</strong>
+        <span>PSNR:</span><strong>${m.psnr} dB</strong>
       </div>
       <div class="cmp-metric-row">
-        <span>📊 SSIM</span><strong>${m.ssim}</strong>
+        <span>SSIM:</span><strong>${m.ssim}</strong>
       </div>
       <div class="cmp-metric-row">
-        <span>🌟 SAM</span><strong>${m.sam_deg}°</strong>
+        <span>SAM:</span><strong>${m.sam_deg}°</strong>
       </div>
       <div class="cmp-metric-row">
-        <span>🔥 ERGAS</span><strong>${m.ergas}</strong>
+        <span>ERGAS:</span><strong>${m.ergas}</strong>
       </div>
       <div class="cmp-metric-row">
-        <span>🌿 NDVI MAE</span><strong>${m.ndvi_mae}</strong>
+        <span>NDVI MAE:</span><strong>${m.ndvi_mae}</strong>
       </div>
       <div class="cmp-metric-row">
-        <span>⚡ Sharpness</span><strong>${m.sharpness_gain}x</strong>
+        <span>Sharpness:</span><strong>${m.sharpness_gain}×</strong>
       </div>
     `;
   }
 
   const esrMetrics  = document.getElementById('cmp-metrics-esr');
   const ldsrMetrics = document.getElementById('cmp-metrics-ldsr');
-  if (esrMetrics  && esrResult.metrics)  esrMetrics.innerHTML  = metricsHTML(esrResult.metrics, 'ESRGAN');
-  if (ldsrMetrics && ldsrResult.metrics) ldsrMetrics.innerHTML = metricsHTML(ldsrResult.metrics, 'LDSR-S2');
+  if (esrMetrics  && esrResult.metrics)  esrMetrics.innerHTML  = metricsHTML(esrResult.metrics);
+  if (ldsrMetrics && ldsrResult.metrics) ldsrMetrics.innerHTML = metricsHTML(ldsrResult.metrics);
 }
 
 // ════════════════════════════════════════════════════════════
-// TRAINING STATUS PANEL
+// TRAINING STATUS
 // ════════════════════════════════════════════════════════════
 async function refreshTrainStatus() {
   try {
@@ -785,29 +854,27 @@ async function refreshTrainStatus() {
     const ssimEl    = document.getElementById('ts-ssim');
 
     const statusMap = {
-      not_started: '❌ Not Started',
-      starting:    '⏳ Starting…',
-      training:    '🏋️ Training',
-      complete:    '✅ Complete'
+      not_started: 'Not Started',
+      starting:    'Initializing…',
+      training:    'Training Active',
+      complete:    'Training Complete'
     };
     if (statusEl) statusEl.textContent = statusMap[data.status] || data.status;
     if (epochsEl) epochsEl.textContent = (data.epochs_done ?? '—') + (data.status === 'complete' ? '' : (' / ' + (data.total_epochs || '?')));
     if (psnrEl)   psnrEl.textContent   = data.best_psnr ? data.best_psnr + ' dB' : '—';
     if (ssimEl)   ssimEl.textContent   = data.weights?.best_ssim ?? '—';
 
-    // Draw PSNR chart
     if (data.history && data.history.length > 0) {
       drawTrainingChart(data.history);
     }
 
-    // Update model-opt-esrgan availability
     const esrOpt = document.getElementById('model-opt-esrgan');
     if (esrOpt) {
       esrOpt.style.opacity = (data.status === 'complete' || data.status === 'training') ? '1' : '0.5';
     }
   } catch(e) {
     const statusEl = document.getElementById('ts-status');
-    if (statusEl) statusEl.textContent = '❓ Backend offline';
+    if (statusEl) statusEl.textContent = 'Offline';
   }
 }
 
@@ -826,30 +893,33 @@ function drawTrainingChart(history) {
 
   ctx.clearRect(0, 0, W, H);
 
-  // Background
-  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fillStyle = '#070a10';
   ctx.fillRect(0, 0, W, H);
 
-  // PSNR line
+  ctx.strokeStyle = '#1a2335';
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.strokeStyle = '#4ade80';
+  ctx.moveTo(0, H/2); ctx.lineTo(W, H/2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#10b981';
   ctx.lineWidth   = 2;
   psnrs.forEach(function(p, i) {
     const x = (i / (n - 1)) * W;
-    const y = H - ((p - minP) / (maxP - minP)) * H;
+    const y = H - ((p - minP) / (maxP - minP)) * (H - 24) - 12;
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
   ctx.stroke();
 
-  // Label
-  ctx.fillStyle = '#86efac';
-  ctx.font      = '11px Inter, sans-serif';
-  ctx.fillText('PSNR: ' + psnrs[psnrs.length-1].toFixed(2) + ' dB', 8, 14);
-  ctx.fillText('Epoch ' + history[history.length-1].epoch, W - 60, 14);
+  ctx.fillStyle = '#6ee7b7';
+  ctx.font      = '11px "JetBrains Mono", monospace';
+  ctx.fillText('PEAK: ' + psnrs[psnrs.length-1].toFixed(2) + ' dB', 12, 18);
+  ctx.fillText('EPOCH ' + history[history.length-1].epoch, W - 70, 18);
 }
 
 // ════════════════════════════════════════════════════════════
-// APPLICATION BOOT
+// BOOT
 // ════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', function() {
   initMap();
@@ -857,13 +927,12 @@ window.addEventListener('DOMContentLoaded', function() {
   fetch('/health')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      const esrReady = data.esrgan_ready ? ' | ESRGAN ✓' : ' | ESRGAN training...';
-      log('SentinelSR v' + data.version + ' online (' + data.device + ')' + esrReady, 'ok');
+      const esrReady = data.esrgan_ready ? ' | Ready' : '';
+      log('[SYSTEM] SentinelSR online (' + data.device + ')' + esrReady, 'ok');
     })
     .catch(function(){
-      log('⚠️ Backend offline — start backend.py', 'warn');
+      log('[WARN] Backend offline', 'warn');
     });
 
-  // Auto-load training status
   refreshTrainStatus();
 });

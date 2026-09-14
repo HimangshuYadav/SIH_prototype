@@ -37,3 +37,7 @@ Thumbs.db
 outputs/
 *.tif
 !data/samples/*.tif
+
+# Large training datasets & progress
+data/real_data/
+.training_progress.json

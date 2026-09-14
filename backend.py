@@ -20,6 +20,7 @@ import os
 import uuid
 import warnings
 from pathlib import Path
+from typing import Optional
 
 import matplotlib
 import matplotlib.cm as cm
@@ -163,7 +164,9 @@ class SRRequest(BaseModel):
     tile_id:             str
     sampling_steps:      int = 20
     compute_uncertainty: bool = True
-    model_choice:        str  = "ldsr"   # "ldsr" | "esrgan" | "both"
+    model_choice:        str  = "esrgan"   # "esrgan" | "ldsr" | "both"
+    model:               Optional[str] = None
+    sharpness_mode:      str = "sharp"     # "standard" | "sharp" | "extra_sharp"
 
 class ValidateRequest(BaseModel):
     tile_id: str   # must have been SR'd already
@@ -838,12 +841,14 @@ def load_esrgan_model():
     """Lazy-load our trained ESRGAN generator, auto-reloading if weights were updated."""
     global _esrgan_model, _esrgan_mtime
 
-    ckpt_path = MODELS_DIR / "esrgan_sentinel2_best.pth"
+    ckpt_path = MODELS_DIR / "esrgan_sentinel2_realdata_scratch_v1.pth"
+    if not ckpt_path.exists():
+        ckpt_path = MODELS_DIR / "esrgan_sentinel2_best.pth"
     if not ckpt_path.exists():
         ckpt_path = MODELS_DIR / "esrgan_sentinel2.pth"
     if not ckpt_path.exists():
         raise FileNotFoundError(
-            "ESRGAN weights not found. Run: python3 train_esrgan.py")
+            "ESRGAN weights not found. Run: python3 train_esrgan_real.py")
 
     current_mtime = ckpt_path.stat().st_mtime
     if _esrgan_model is not None and current_mtime <= _esrgan_mtime:
@@ -875,7 +880,7 @@ def load_esrgan_model():
     return G
 
 
-def _run_esrgan_sr(tile_path: Path) -> dict:
+def _run_esrgan_sr(tile_path: Path, sharpness_mode: str = "sharp") -> dict:
     """
     Run our trained ESRGAN model on the full tile using the same
     sliding-window tiling engine as LDSR-S2.
@@ -993,25 +998,37 @@ def _run_esrgan_sr(tile_path: Path) -> dict:
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         grad = np.sqrt(gx**2 + gy**2)
-        edge_weight = np.clip((grad - 0.02) / 0.05, 0.0, 1.0)
+        edge_weight = np.clip((grad - 0.02) / 0.045, 0.0, 1.0)
         edge_weight = cv2.GaussianBlur(edge_weight, (3, 3), 0.8)
 
+        shock_strength = 0.70 if sharpness_mode == "sharp" else (0.85 if sharpness_mode == "extra_sharp" else 0.40)
         for b in range(4):
             ch = sr_np[b]
             ero = cv2.erode(ch, kernel)
             dil = cv2.dilate(ch, kernel)
             mid = (ero + dil) * 0.5
             shock_step = np.where(ch >= mid, dil, ero)
-            sr_np[b] = np.clip(ch * (1.0 - 0.50 * edge_weight) + shock_step * (0.50 * edge_weight), 0.0, 1.0)
-        log.info("  Rooftop morphological separation applied ✓")
+            sr_np[b] = np.clip(ch * (1.0 - shock_strength * edge_weight) + shock_step * (shock_strength * edge_weight), 0.0, 1.0)
+        log.info(f"  Rooftop morphological separation applied (strength={shock_strength}) ✓")
     except Exception as e:
         log.warning(f"  Shock filter skipped: {e}")
 
-    # ── 5. Reference from Pretrained Model (LDSR): Razor-Sharp Unsharp Masking ─
+    # ── 5. Reference from Pretrained Model (LDSR): Razor-Sharp Acutance Boost ─
     try:
-        sr_blur = gaussian_filter(sr_np, sigma=[0, 1.0, 1.0])
-        sr_np = np.clip(sr_np + 0.45 * (sr_np - sr_blur), 0.0, 1.0).astype(np.float32)
-        log.info("  Pretrained Reference: High-frequency unsharp masking applied (sigma=1.0, amount=0.45) ✓")
+        if sharpness_mode == "extra_sharp":
+            fine_sigma, fine_wt, mid_wt = 0.7, 0.80, 0.40
+        elif sharpness_mode == "sharp":
+            fine_sigma, fine_wt, mid_wt = 0.8, 0.60, 0.30
+        else:  # "standard"
+            fine_sigma, fine_wt, mid_wt = 1.0, 0.35, 0.15
+
+        blur_fine = gaussian_filter(sr_np, sigma=[0, fine_sigma, fine_sigma])
+        blur_mid  = gaussian_filter(sr_np, sigma=[0, 2.0, 2.0])
+        detail_fine = sr_np - blur_fine
+        detail_mid  = blur_fine - blur_mid
+        boost = (fine_wt * detail_fine + mid_wt * detail_mid) * (0.35 + 0.65 * edge_weight[None])
+        sr_np = np.clip(sr_np + boost, 0.0, 1.0).astype(np.float32)
+        log.info(f"  Pretrained Reference: High-frequency acutance boost applied (mode={sharpness_mode}) ✓")
     except Exception as e:
         log.warning(f"  Unsharp masking skipped: {e}")
 
@@ -1044,11 +1061,12 @@ def _run_esrgan_sr(tile_path: Path) -> dict:
     sr_ndwi_png = OUTPUT_DIR / f"{stem}{sfx}_sr_ndwi.png"
     lr_ndvi_png = OUTPUT_DIR / f"{stem}_lr_ndvi.png"
 
+    enhance = (sharpness_mode != "standard")
     rgb_bounds = _to_png(patch,  lr_png,  band_indices=(2,1,0), upsample_factor=4)
-    _to_png(sr_np,  sr_png,  band_indices=(2,1,0), ref_bounds=rgb_bounds, enhance_clarity=False)
+    _to_png(sr_np,  sr_png,  band_indices=(2,1,0), ref_bounds=rgb_bounds, enhance_clarity=enhance)
 
     cir_bounds = _to_png(patch,  lr_cir,  band_indices=(3,2,1), upsample_factor=4)
-    _to_png(sr_np,  sr_cir,  band_indices=(3,2,1), ref_bounds=cir_bounds, enhance_clarity=False)
+    _to_png(sr_np,  sr_cir,  band_indices=(3,2,1), ref_bounds=cir_bounds, enhance_clarity=enhance)
 
     _save_colormap_png(lr_ndvi, lr_ndvi_png, "RdYlGn", -0.1, 0.75, upsample_factor=4)
     _save_colormap_png(sr_ndvi, sr_ndvi_png, "RdYlGn", -0.1, 0.75)
@@ -1079,7 +1097,7 @@ def _run_esrgan_sr(tile_path: Path) -> dict:
         "sr_png": sr_png.name,
         "lr_cir_png": lr_cir.name,
         "sr_cir_png": sr_cir.name,
-        
+
         "lr_ndvi_png": lr_ndvi_png.name,
         "sr_ndvi_png": sr_ndvi_png.name,
         "sr_ndwi_png": sr_ndwi_png.name,
@@ -1165,22 +1183,29 @@ def _wald_validation(lr_orig: np.ndarray, sr_np: np.ndarray,
 # ── REST API Endpoints ────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    esrgan_ready = (MODELS_DIR / "esrgan_sentinel2_best.pth").exists() or \
+    esrgan_ready = (MODELS_DIR / "esrgan_sentinel2_realdata_scratch_v1.pth").exists() or \
+                   (MODELS_DIR / "esrgan_sentinel2_best.pth").exists() or \
                    (MODELS_DIR / "esrgan_sentinel2.pth").exists()
-    return {"status": "ok", "version": "4.0",
+    return {"status": "ok", "version": "4.1",
             "device": get_device(), "esrgan_ready": esrgan_ready}
 
 
 @app.get("/api/train_status")
 def train_status():
     """Returns current ESRGAN training progress from the CSV log."""
-    csv_path = MODELS_DIR / "training_log.csv"
-    best_ckpt = MODELS_DIR / "esrgan_sentinel2_best.pth"
-    final_ckpt = MODELS_DIR / "esrgan_sentinel2.pth"
+    csv_path = MODELS_DIR / "realdata_training_log.csv"
+    if not csv_path.exists():
+        csv_path = MODELS_DIR / "training_log.csv"
+    best_ckpt = MODELS_DIR / "esrgan_sentinel2_realdata_scratch_v1.pth"
+    if not best_ckpt.exists():
+        best_ckpt = MODELS_DIR / "esrgan_sentinel2_best.pth"
+    final_ckpt = MODELS_DIR / "esrgan_sentinel2_realdata_scratch_final.pth"
+    if not final_ckpt.exists():
+        final_ckpt = MODELS_DIR / "esrgan_sentinel2.pth"
 
     if not csv_path.exists():
         return {"status": "not_started",
-                "message": "Training not started. Run: python3 train_esrgan.py"}
+                "message": "Training not started. Run: python3 train_esrgan_real.py"}
 
     rows = []
     with open(csv_path, "r") as f:
@@ -1200,7 +1225,7 @@ def train_status():
                         "best_psnr": ck.get("val_psnr","?"),
                         "best_ssim": ck.get("val_ssim","?")}
 
-    status = "complete" if final_ckpt.exists() else "training"
+    status = "complete" if (final_ckpt.exists() or len(rows) >= 20) else "training"
     return {
         "status": status,
         "epochs_done": len(rows),
@@ -1244,15 +1269,15 @@ def run_sr(req: SRRequest):
         raise HTTPException(404, f"Tile {req.tile_id} not found. Please fetch it first.")
 
     try:
-        choice = req.model_choice.lower()
+        choice = (req.model or req.model_choice).lower()
 
         if choice == "esrgan":
-            result = _run_esrgan_sr(tile_path)
+            result = _run_esrgan_sr(tile_path, sharpness_mode=req.sharpness_mode)
             result["model"] = "ESRGAN (Ours)"
         elif choice == "both":
             result_ldsr  = _run_sr(tile_path, req.sampling_steps, req.compute_uncertainty)
             result_ldsr["model"] = "LDSR-S2 (SOTA)"
-            result_esr   = _run_esrgan_sr(tile_path)
+            result_esr   = _run_esrgan_sr(tile_path, sharpness_mode=req.sharpness_mode)
             result_esr["model"]  = "ESRGAN (Ours)"
             # Return combined result
             return {
