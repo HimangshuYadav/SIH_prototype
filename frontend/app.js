@@ -70,15 +70,6 @@ function initMap() {
   // Scientific metric scale bar
   L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
 
-  const positronLayer = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {
-      attribution: '© CartoDB / OpenStreetMap',
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }
-  );
-
   const s2Layer = L.tileLayer(
     'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg',
     {
@@ -95,22 +86,12 @@ function initMap() {
     }
   );
 
-  const osmLayer = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
-    }
-  );
-
-  // Default to clean scientific cartographic base
-  positronLayer.addTo(map);
+  // Sentinel-2 satellite imagery is the default active basemap
+  s2Layer.addTo(map);
 
   const baseLayers = {
-    'Carto Positron (Technical)': positronLayer,
-    'Sentinel-2 Cloudless (10m BOA)': s2Layer,
+    'Sentinel-2 (10m BOA)': s2Layer,
     'High-Res Satellite (Esri)': esriLayer,
-    'OpenStreetMap Carto': osmLayer,
   };
 
   L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
