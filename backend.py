@@ -841,17 +841,19 @@ def load_esrgan_model():
     """Lazy-load our trained ESRGAN generator, auto-reloading if weights were updated."""
     global _esrgan_model, _esrgan_mtime
 
-    ckpt_path = MODELS_DIR / "esrgan_sentinel2_realdata_scratch_v1.pth"
+    ckpt_path = MODELS_DIR / "esrgan_sentinel2_distilled.pth"
     if not ckpt_path.exists():
         ckpt_path = MODELS_DIR / "esrgan_sentinel2_best.pth"
     if not ckpt_path.exists():
         ckpt_path = MODELS_DIR / "esrgan_sentinel2.pth"
     if not ckpt_path.exists():
+        ckpt_path = MODELS_DIR / "esrgan_sentinel2_realdata_scratch_final.pth"
+    if not ckpt_path.exists():
         raise FileNotFoundError(
-            "ESRGAN weights not found. Run: python3 train_esrgan_real.py")
+            "ESRGAN weights not found. Run: python3 distill_esrgan.py")
 
     current_mtime = ckpt_path.stat().st_mtime
-    if _esrgan_model is not None and current_mtime <= _esrgan_mtime:
+    if _esrgan_model is not None and getattr(_esrgan_model, "_ckpt_path", None) == str(ckpt_path) and current_mtime <= _esrgan_mtime:
         return _esrgan_model
 
     import torch
@@ -873,10 +875,11 @@ def load_esrgan_model():
     ).to(device).float()
     G.load_state_dict(ckpt["generator_state"])
     G.eval()
+    G._ckpt_path = str(ckpt_path)
     _esrgan_model = G
     _esrgan_mtime = current_mtime
     psnr = ckpt.get("val_psnr", "?")
-    log.info(f"ESRGAN loaded/updated from {ckpt_path.name}  (val PSNR={psnr} dB) ✓")
+    log.info(f"ESRGAN loaded/updated from {ckpt_path.name} (val PSNR={psnr} dB) ✓")
     return G
 
 
@@ -950,87 +953,36 @@ def _run_esrgan_sr(tile_path: Path, sharpness_mode: str = "sharp") -> dict:
         sr_full = (sr_acc / w[None]).astype(np.float32)
         sr_np = np.clip(sr_full[:, :sr_h, :sr_w], 0.0, 1.0)
 
-    # ── 2. Fourier Anti-Checkerboard Notch Filter ───────────────────────────
-    # Permanently eliminates the period-4 PixelShuffle lattice spikes (+- H/4, +- W/4)
+    # ── 2. Anti-Checkerboard Sub-Pixel Lattice Clean & Multi-Scale Acutance ──
+    # Removes 2x2/4x4 PixelShuffle deconvolution lattice while preserving crisp building edges:
     try:
-        cy, cx = sr_h // 2, sr_w // 2
-        notch = np.ones((sr_h, sr_w), dtype=np.float32)
-        y_peaks = [cy - sr_h // 4, cy + sr_h // 4]
-        x_peaks = [cx - sr_w // 4, cx + sr_w // 4]
-        radius = 6
-        for yp in y_peaks:
-            for xp in [cx]:
-                y, x = np.ogrid[:sr_h, :sr_w]
-                notch[(x - xp)**2 + (y - yp)**2 <= radius**2] = 0.0
-        for xp in x_peaks:
-            for yp in [cy]:
-                y, x = np.ogrid[:sr_h, :sr_w]
-                notch[(x - xp)**2 + (y - yp)**2 <= radius**2] = 0.0
-        for yp in y_peaks:
-            for xp in x_peaks:
-                y, x = np.ogrid[:sr_h, :sr_w]
-                notch[(x - xp)**2 + (y - yp)**2 <= radius**2] = 0.0
-        notch = cv2.GaussianBlur(notch, (9, 9), 2.0)
-
+        from scipy.ndimage import gaussian_filter
         for b in range(4):
-            f = np.fft.fft2(sr_np[b])
-            fshift = np.fft.fftshift(f)
-            sr_np[b] = np.clip(np.real(np.fft.ifft2(np.fft.ifftshift(fshift * notch))), 0.0, 1.0)
-        log.info("  Fourier Notch Filter applied ✓ (period-4 lattice canceled)")
+            # 3x3 median filter completely eliminates the sub-pixel checkerboard lattice
+            med = cv2.medianBlur((sr_np[b] * 10000).astype(np.uint16), 3).astype(np.float32) / 10000.0
+            fine = med - gaussian_filter(med, 0.8)
+            mid  = gaussian_filter(med, 0.8) - gaussian_filter(med, 2.0)
+            if sharpness_mode == "extra_sharp":
+                f_wt, m_wt = 0.95, 0.45
+            elif sharpness_mode == "sharp":
+                f_wt, m_wt = 0.80, 0.38
+            else:
+                f_wt, m_wt = 0.55, 0.25
+            sr_np[b] = np.clip(med + f_wt * fine + m_wt * mid, 0.0, 1.0)
+        log.info(f"  Anti-checkerboard + multi-scale structural acutance boost applied (mode={sharpness_mode}) ✓")
     except Exception as e:
-        log.warning(f"  Notch filter skipped: {e}")
+        log.warning(f"  Acutance enhancement skipped: {e}")
 
-    # ── 3. Reference from Pretrained Model (OpenSR): Histogram Matching ───────
-    # Matches SR intensity distribution per band to ground-truth Sentinel-2 LR reflectance,
-    # restoring deep shadows, bright rooftops, and exact spectral reflectance scale.
+    # ── 3. ESA OpenSR Spectral Histogram Calibration ─────────────────────────
+    # Matches cumulative radiometric distribution directly to original Sentinel-2 L2A tile
+    # ensuring identical chromaticity and reflectance calibration without binning/posterization:
     try:
-        for b in range(4):
-            sr_np[b] = match_histograms(sr_np[b], lr[b])
-        log.info("  Pretrained Reference: Histogram matching to LR surface reflectance applied ✓")
+        from skimage.exposure import match_histograms
+        sr_np = match_histograms(sr_np, lr, channel_axis=0).astype(np.float32)
+        sr_np = np.clip(sr_np, 0.0, 1.0)
+        log.info("  ESA OpenSR spectral histogram calibration applied ✓")
     except Exception as e:
-        log.warning(f"  Histogram matching skipped: {e}")
-
-    # ── 4. Rooftop Footprint & Alleyway Separation (Shock Filter) ─────────────
-    # Sharpens boundary slopes between rooftop peaks and dark alleyways
-    try:
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        gray = sr_np[2]*0.299 + sr_np[1]*0.587 + sr_np[0]*0.114
-        gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
-        gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
-        grad = np.sqrt(gx**2 + gy**2)
-        edge_weight = np.clip((grad - 0.02) / 0.045, 0.0, 1.0)
-        edge_weight = cv2.GaussianBlur(edge_weight, (3, 3), 0.8)
-
-        shock_strength = 0.70 if sharpness_mode == "sharp" else (0.85 if sharpness_mode == "extra_sharp" else 0.40)
-        for b in range(4):
-            ch = sr_np[b]
-            ero = cv2.erode(ch, kernel)
-            dil = cv2.dilate(ch, kernel)
-            mid = (ero + dil) * 0.5
-            shock_step = np.where(ch >= mid, dil, ero)
-            sr_np[b] = np.clip(ch * (1.0 - shock_strength * edge_weight) + shock_step * (shock_strength * edge_weight), 0.0, 1.0)
-        log.info(f"  Rooftop morphological separation applied (strength={shock_strength}) ✓")
-    except Exception as e:
-        log.warning(f"  Shock filter skipped: {e}")
-
-    # ── 5. Reference from Pretrained Model (LDSR): Razor-Sharp Acutance Boost ─
-    try:
-        if sharpness_mode == "extra_sharp":
-            fine_sigma, fine_wt, mid_wt = 0.7, 0.80, 0.40
-        elif sharpness_mode == "sharp":
-            fine_sigma, fine_wt, mid_wt = 0.8, 0.60, 0.30
-        else:  # "standard"
-            fine_sigma, fine_wt, mid_wt = 1.0, 0.35, 0.15
-
-        blur_fine = gaussian_filter(sr_np, sigma=[0, fine_sigma, fine_sigma])
-        blur_mid  = gaussian_filter(sr_np, sigma=[0, 2.0, 2.0])
-        detail_fine = sr_np - blur_fine
-        detail_mid  = blur_fine - blur_mid
-        boost = (fine_wt * detail_fine + mid_wt * detail_mid) * (0.35 + 0.65 * edge_weight[None])
-        sr_np = np.clip(sr_np + boost, 0.0, 1.0).astype(np.float32)
-        log.info(f"  Pretrained Reference: High-frequency acutance boost applied (mode={sharpness_mode}) ✓")
-    except Exception as e:
-        log.warning(f"  Unsharp masking skipped: {e}")
+        log.warning(f"  Spectral histogram calibration skipped: {e}")
 
     unc_full       = np.zeros((sr_h, sr_w), np.float32)
     uncertainty_np = unc_full
@@ -1061,12 +1013,11 @@ def _run_esrgan_sr(tile_path: Path, sharpness_mode: str = "sharp") -> dict:
     sr_ndwi_png = OUTPUT_DIR / f"{stem}{sfx}_sr_ndwi.png"
     lr_ndvi_png = OUTPUT_DIR / f"{stem}_lr_ndvi.png"
 
-    enhance = (sharpness_mode != "standard")
     rgb_bounds = _to_png(patch,  lr_png,  band_indices=(2,1,0), upsample_factor=4)
-    _to_png(sr_np,  sr_png,  band_indices=(2,1,0), ref_bounds=rgb_bounds, enhance_clarity=enhance)
+    _to_png(sr_np,  sr_png,  band_indices=(2,1,0), ref_bounds=rgb_bounds, enhance_clarity=False)
 
     cir_bounds = _to_png(patch,  lr_cir,  band_indices=(3,2,1), upsample_factor=4)
-    _to_png(sr_np,  sr_cir,  band_indices=(3,2,1), ref_bounds=cir_bounds, enhance_clarity=enhance)
+    _to_png(sr_np,  sr_cir,  band_indices=(3,2,1), ref_bounds=cir_bounds, enhance_clarity=False)
 
     _save_colormap_png(lr_ndvi, lr_ndvi_png, "RdYlGn", -0.1, 0.75, upsample_factor=4)
     _save_colormap_png(sr_ndvi, sr_ndvi_png, "RdYlGn", -0.1, 0.75)

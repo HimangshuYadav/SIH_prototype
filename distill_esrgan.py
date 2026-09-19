@@ -29,11 +29,13 @@ LR_SIZE = 32
 HR_SIZE = 128
 SCALE = 4
 
-TILES = [
-    "s2_b88f8cd1", "s2_daac3357", "s2_a8394db7", "s2_1d8a71bb",
-    "s2_3f65bd62", "s2_f301886a", "s2_f410a488", "s2_bc703dab",
-    "s2_c331a681", "s2_ffb2112d", "s2_0cbb46de"
-]
+def get_distill_tiles():
+    cache_files = set(p.stem for p in Path("data/cache").glob("*.tif"))
+    out_files = set(p.name.replace("_enhanced_2.5m.tif", "") for p in Path("data/outputs").glob("*_enhanced_2.5m.tif") if not p.name.endswith("_esr_enhanced_2.5m.tif"))
+    found = sorted(list(cache_files.intersection(out_files)))
+    return found if found else ["s2_b88f8cd1", "s2_a8394db7"]
+
+TILES = get_distill_tiles()
 
 
 class LaplacianLoss(nn.Module):
@@ -265,6 +267,7 @@ def train_distill(epochs=18, lr=1e-4):
                 "config": cfg,
                 "distilled_from": "opensr-ldsrs2"
             }
+            torch.save(save_dict, "models/esrgan_sentinel2_distilled.pth")
             torch.save(save_dict, "models/esrgan_sentinel2_best.pth")
             torch.save(save_dict, "models/esrgan_sentinel2.pth")
             log.info(f"  ★ New best student model saved! PSNR={mean_psnr:.2f}dB")
