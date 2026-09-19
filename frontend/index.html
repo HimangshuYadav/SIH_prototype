@@ -130,6 +130,9 @@
     <button class="nav-link" id="nav-apps" onclick="showPanel('apps')">
       <svg class="tab-icon"><use href="#icon-layers"></use></svg> GIS Products
     </button>
+    <button class="nav-link" id="nav-analysis" onclick="showPanel('analysis')">
+      <svg class="tab-icon"><use href="#icon-benchmark"></use></svg> Analysis
+    </button>
     <button class="nav-link" id="nav-info" onclick="showPanel('info')">
       <svg class="tab-icon"><use href="#icon-info"></use></svg> About
     </button>
@@ -755,7 +758,375 @@
     </div>
   </section>
 
-  <!-- ── 6. ABOUT ──────────────────────────────────────────────────────────── -->
+  <!-- ── 6. ANALYSIS PANEL ────────────────────────────────────────────── -->
+  <section class="content-panel" id="panel-analysis" style="display:none">
+    <div class="panel-header">
+      <div>
+        <h2>Domain Analysis</h2>
+        <p>Specialized analysis layers computed from 2.5m SR output: Crop Monitoring, Urban Analysis &amp; Disaster Assessment.</p>
+      </div>
+      <button class="btn-primary btn-sm" id="btn-run-analysis" onclick="runAnalysis('all')" disabled>
+        <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run All Analysis
+      </button>
+    </div>
+
+    <!-- Domain Tabs -->
+    <div class="domain-tabs">
+      <button class="domain-tab active" id="dtab-crop"     onclick="switchDomainTab('crop')">🌾 Crop Monitoring</button>
+      <button class="domain-tab"         id="dtab-urban"    onclick="switchDomainTab('urban')">🏙️ Urban Analysis</button>
+      <button class="domain-tab"         id="dtab-disaster" onclick="switchDomainTab('disaster')">🚨 Disaster Assessment</button>
+    </div>
+
+    <!-- CROP MONITORING PANEL -->
+    <div class="domain-panel" id="domain-crop">
+      <div class="domain-run-bar">
+        <span class="domain-desc">Analyzes NDVI, field boundaries, crop stress zones, irrigation patterns &amp; healthy canopy at 2.5m resolution.</span>
+        <button class="btn-outline btn-sm" onclick="runAnalysis('crop')">
+          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run Crop Analysis
+        </button>
+      </div>
+      <div class="analysis-grid" id="analysis-grid-crop">
+        <!-- NDVI Health -->
+        <div class="analysis-card" id="acard-crop-ndvi">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🌿</span>
+              <div>
+                <h4>NDVI Health Map</h4>
+                <span class="acard-sub">Vegetation health spectrum</span>
+              </div>
+            </div>
+            <span class="acard-badge crop">Crop</span>
+          </div>
+          <div class="acard-preview" id="acard-preview-crop-ndvi">
+            <div class="acard-placeholder">Run analysis to generate</div>
+            <img id="aimg-crop-ndvi" src="" alt="NDVI" style="display:none" />
+          </div>
+          <div class="acard-stats" id="astats-crop-ndvi">
+            <div class="astat"><span>Mean NDVI</span><strong id="ast-mean-ndvi">—</strong></div>
+            <div class="astat"><span>Healthy</span><strong id="ast-healthy-pct" class="green">—</strong></div>
+            <div class="astat"><span>Moderate</span><strong id="ast-mod-pct" class="yellow">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Field Boundary -->
+        <div class="analysis-card" id="acard-crop-boundary">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🗺️</span>
+              <div>
+                <h4>Field Boundary Map</h4>
+                <span class="acard-sub">Plot edge detection at 2.5m</span>
+              </div>
+            </div>
+            <span class="acard-badge crop">Crop</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-crop-boundary">Run analysis to generate</div>
+            <img id="aimg-crop-boundary" src="" alt="Boundaries" style="display:none" />
+          </div>
+          <div class="acard-desc">Sobel edge detection on NDVI reveals individual plot boundaries, bunds &amp; irrigation channels.</div>
+        </div>
+
+        <!-- Crop Stress -->
+        <div class="analysis-card" id="acard-crop-stress">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">⚠️</span>
+              <div>
+                <h4>Crop Stress Alert</h4>
+                <span class="acard-sub">NDVI &lt; 0.2 stress zones</span>
+              </div>
+            </div>
+            <span class="acard-badge warn">Alert</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-crop-stress">Run analysis to generate</div>
+            <img id="aimg-crop-stress" src="" alt="Stress" style="display:none" />
+          </div>
+          <div class="acard-stats" id="astats-crop-stress">
+            <div class="astat"><span>Stressed Area</span><strong id="ast-stressed-pct" class="red">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Irrigation -->
+        <div class="analysis-card" id="acard-crop-irrigation">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">💧</span>
+              <div>
+                <h4>Irrigation Zone Map</h4>
+                <span class="acard-sub">Soil moisture via NDWI</span>
+              </div>
+            </div>
+            <span class="acard-badge blue">Water</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-crop-irrigation">Run analysis to generate</div>
+            <img id="aimg-crop-irrigation" src="" alt="Irrigation" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Irrigated Zone</span><strong id="ast-irrigated-pct" class="blue">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Healthy Canopy -->
+        <div class="analysis-card" id="acard-crop-canopy">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🌳</span>
+              <div>
+                <h4>Healthy Canopy Map</h4>
+                <span class="acard-sub">Dense vegetation NDVI &gt; 0.4</span>
+              </div>
+            </div>
+            <span class="acard-badge crop">Canopy</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-crop-canopy">Run analysis to generate</div>
+            <img id="aimg-crop-canopy" src="" alt="Canopy" style="display:none" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- URBAN ANALYSIS PANEL -->
+    <div class="domain-panel" id="domain-urban" style="display:none">
+      <div class="domain-run-bar">
+        <span class="domain-desc">Identifies built-up areas, road networks, impervious surfaces, urban greenery &amp; population density proxies.</span>
+        <button class="btn-outline btn-sm" onclick="runAnalysis('urban')">
+          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run Urban Analysis
+        </button>
+      </div>
+      <div class="analysis-grid" id="analysis-grid-urban">
+
+        <!-- Built-up Area -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🏗️</span>
+              <div>
+                <h4>Built-up Area Map</h4>
+                <span class="acard-sub">NDBI proxy — concrete &amp; structures</span>
+              </div>
+            </div>
+            <span class="acard-badge urban">Urban</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-urban-buildup">Run analysis to generate</div>
+            <img id="aimg-urban-buildup" src="" alt="Buildup" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Built-up Area</span><strong id="ast-buildup-pct" class="red">—</strong></div>
+            <div class="astat"><span>Impervious</span><strong id="ast-imperv-pct">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Road Network -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🛣️</span>
+              <div>
+                <h4>Road Network Extractor</h4>
+                <span class="acard-sub">Linear feature density map</span>
+              </div>
+            </div>
+            <span class="acard-badge urban">Roads</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-urban-roads">Run analysis to generate</div>
+            <img id="aimg-urban-roads" src="" alt="Roads" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Road Density</span><strong id="ast-road-density">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Impervious Surface -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🪨</span>
+              <div>
+                <h4>Impervious Surface</h4>
+                <span class="acard-sub">Concrete, asphalt &amp; rooftops</span>
+              </div>
+            </div>
+            <span class="acard-badge urban">Surface</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-urban-impervious">Run analysis to generate</div>
+            <img id="aimg-urban-impervious" src="" alt="Impervious" style="display:none" />
+          </div>
+        </div>
+
+        <!-- Urban Greenery -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🌲</span>
+              <div>
+                <h4>Urban Greenery Map</h4>
+                <span class="acard-sub">Parks, trees &amp; open green spaces</span>
+              </div>
+            </div>
+            <span class="acard-badge crop">Green</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-urban-greenery">Run analysis to generate</div>
+            <img id="aimg-urban-greenery" src="" alt="Greenery" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Green Cover</span><strong id="ast-greenery-pct" class="green">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Population Density -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">👥</span>
+              <div>
+                <h4>Population Density Proxy</h4>
+                <span class="acard-sub">Texture-based crowding estimate</span>
+              </div>
+            </div>
+            <span class="acard-badge urban">Density</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-urban-density">Run analysis to generate</div>
+            <img id="aimg-urban-density" src="" alt="Density" style="display:none" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DISASTER ASSESSMENT PANEL -->
+    <div class="domain-panel" id="domain-disaster" style="display:none">
+      <div class="domain-run-bar">
+        <span class="domain-desc">Flood extent mapping, damage severity grading, road accessibility, relief zone detection &amp; surface anomaly.</span>
+        <button class="btn-outline btn-sm" onclick="runAnalysis('disaster')">
+          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run Disaster Analysis
+        </button>
+      </div>
+      <div class="analysis-grid" id="analysis-grid-disaster">
+
+        <!-- Flood Extent -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🌊</span>
+              <div>
+                <h4>Flood Extent Map</h4>
+                <span class="acard-sub">NDWI &gt; 0.3 water delineation</span>
+              </div>
+            </div>
+            <span class="acard-badge blue">Flood</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-disaster-flood">Run analysis to generate</div>
+            <img id="aimg-disaster-flood" src="" alt="Flood" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Flooded Area</span><strong id="ast-flooded-pct" class="blue">—</strong></div>
+            <div class="astat wide"><span>Status</span><strong id="ast-water-status">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Damage Severity -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🏚️</span>
+              <div>
+                <h4>Damage Severity Map</h4>
+                <span class="acard-sub">Texture anomaly → debris mapping</span>
+              </div>
+            </div>
+            <span class="acard-badge warn">Damage</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-disaster-damage">Run analysis to generate</div>
+            <img id="aimg-disaster-damage" src="" alt="Damage" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Severe Damage</span><strong id="ast-severe-pct" class="red">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Road Accessibility -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🚧</span>
+              <div>
+                <h4>Road Accessibility</h4>
+                <span class="acard-sub">Open vs blocked route mapping</span>
+              </div>
+            </div>
+            <span class="acard-badge urban">Routes</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-disaster-roads">Run analysis to generate</div>
+            <img id="aimg-disaster-roads" src="" alt="Roads" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Blocked Roads</span><strong id="ast-blocked-pct" class="red">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Relief Zone -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">⛺</span>
+              <div>
+                <h4>Relief Zone Finder</h4>
+                <span class="acard-sub">Flat open ground for camps</span>
+              </div>
+            </div>
+            <span class="acard-badge crop">Safe</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-disaster-relief">Run analysis to generate</div>
+            <img id="aimg-disaster-relief" src="" alt="Relief" style="display:none" />
+          </div>
+          <div class="acard-stats">
+            <div class="astat"><span>Safe Zones</span><strong id="ast-relief-pct" class="green">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Surface Anomaly -->
+        <div class="analysis-card">
+          <div class="acard-head">
+            <div class="acard-title-group">
+              <span class="acard-icon">🔥</span>
+              <div>
+                <h4>Surface Anomaly Map</h4>
+                <span class="acard-sub">Burn scars &amp; bare soil detection</span>
+              </div>
+            </div>
+            <span class="acard-badge warn">Anomaly</span>
+          </div>
+          <div class="acard-preview">
+            <div class="acard-placeholder" id="apl-disaster-anomaly">Run analysis to generate</div>
+            <img id="aimg-disaster-anomaly" src="" alt="Anomaly" style="display:none" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Not-Ready State -->
+    <div class="analysis-not-ready" id="analysis-not-ready" style="display:none">
+      <svg class="placeholder-svg"><use href="#icon-benchmark"></use></svg>
+      <h3>Run Super-Resolution First</h3>
+      <p>Analysis layers are computed from the 2.5m SR output. Fetch a tile and run SR, then return here.</p>
+    </div>
+  </section>
+
+  <!-- ── 7. ABOUT ──────────────────────────────────────────────────────────── -->
+
   <section class="content-panel" id="panel-info" style="display:none">
     <div class="info-content">
       <h1>SentinelSR Architecture</h1>

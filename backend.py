@@ -1299,6 +1299,298 @@ def run_sr(req: SRRequest):
     return _build_sr_response(req.tile_id, result, suffix="_esr" if choice == "esrgan" else "")
 
 
+
+# ── Domain Analysis Engine ────────────────────────────────────────────────────
+
+def _sobel_edges(band_2d: np.ndarray) -> np.ndarray:
+    """Compute Sobel edge magnitude from a 2D float array."""
+    from scipy.ndimage import sobel
+    sx = sobel(band_2d, axis=0)
+    sy = sobel(band_2d, axis=1)
+    return np.hypot(sx, sy)
+
+
+def _run_crop_analysis(sr_arr: np.ndarray, stem: str) -> dict:
+    """
+    Crop Monitoring Analysis:
+    1. NDVI Health Map (enhanced with stress zones)
+    2. Field Boundary Map (Sobel edges on NDVI)
+    3. Crop Stress Alert Map (NDVI < 0.2 = red)
+    4. Irrigation Zone Map (NDWI soil moisture proxy)
+    5. Healthy Canopy Map (NDVI > 0.5 zones)
+    Band layout: B02=0, B03=1, B04=2, B08=3
+    """
+    b02, b03, b04, b08 = sr_arr[0], sr_arr[1], sr_arr[2], sr_arr[3]
+
+    # 1. NDVI
+    ndvi = (b08 - b04) / (b08 + b04 + 1e-6)
+
+    # Field Boundary Map — Sobel edges on NDVI
+    edges = _sobel_edges(ndvi)
+    edges_norm = np.clip(edges / (np.percentile(edges, 98) + 1e-6), 0.0, 1.0)
+    boundary_png = OUTPUT_DIR / f"{stem}_crop_boundary.png"
+    _save_colormap_png(edges_norm, boundary_png, cmap_name="YlOrBr", vmin=0.0, vmax=1.0)
+
+    # Crop Stress Alert — NDVI < 0.2 = stressed
+    stress_mask = np.where(ndvi < 0.15, 1.0, np.where(ndvi < 0.25, 0.5, 0.0))
+    stress_png = OUTPUT_DIR / f"{stem}_crop_stress.png"
+    _save_colormap_png(stress_mask, stress_png, cmap_name="RdYlGn_r", vmin=0.0, vmax=1.0)
+
+    # NDVI Health Map (full spectrum)
+    ndvi_png = OUTPUT_DIR / f"{stem}_crop_ndvi.png"
+    _save_colormap_png(ndvi, ndvi_png, cmap_name="RdYlGn", vmin=-0.2, vmax=0.8)
+
+    # Irrigation Zone Map — NDWI = (B03-B08)/(B03+B08) for soil moisture
+    ndwi_soil = (b03 - b08) / (b03 + b08 + 1e-6)
+    irrigation_png = OUTPUT_DIR / f"{stem}_crop_irrigation.png"
+    _save_colormap_png(ndwi_soil, irrigation_png, cmap_name="Blues", vmin=-0.5, vmax=0.5)
+
+    # Healthy Canopy Map (NDVI > 0.4)
+    canopy = np.clip(ndvi, 0.0, 1.0)
+    canopy[ndvi < 0.4] = 0.0
+    canopy_png = OUTPUT_DIR / f"{stem}_crop_canopy.png"
+    _save_colormap_png(canopy, canopy_png, cmap_name="Greens", vmin=0.0, vmax=0.9)
+
+    # Stats
+    stressed_pct  = float(np.mean(ndvi < 0.2) * 100)
+    healthy_pct   = float(np.mean(ndvi > 0.5) * 100)
+    moderate_pct  = float(np.mean((ndvi >= 0.2) & (ndvi <= 0.5)) * 100)
+    mean_ndvi     = float(np.mean(np.clip(ndvi, -1, 1)))
+    irrigated_pct = float(np.mean(ndwi_soil > 0.0) * 100)
+
+    return {
+        "ndvi_map":       ndvi_png.name,
+        "boundary_map":   boundary_png.name,
+        "stress_map":     stress_png.name,
+        "irrigation_map": irrigation_png.name,
+        "canopy_map":     canopy_png.name,
+        "stats": {
+            "mean_ndvi":     round(mean_ndvi, 3),
+            "stressed_pct":  round(stressed_pct, 1),
+            "healthy_pct":   round(healthy_pct, 1),
+            "moderate_pct":  round(moderate_pct, 1),
+            "irrigated_pct": round(irrigated_pct, 1),
+        }
+    }
+
+
+def _run_urban_analysis(sr_arr: np.ndarray, stem: str) -> dict:
+    """
+    Urban Analysis:
+    1. Built-up Area Map (NDBI proxy using B04-B03)
+    2. Road Density Map (Laplacian edge density on RGB)
+    3. Impervious Surface Map (low NIR + high Red)
+    4. Urban Greenery Map (NDVI masked to low-built zones)
+    5. Texture / Population Density Proxy
+    Band layout: B02=0, B03=1, B04=2, B08=3
+    """
+    b02, b03, b04, b08 = sr_arr[0], sr_arr[1], sr_arr[2], sr_arr[3]
+
+    # 1. Built-up Area (NDBI proxy: high Red, low NIR)
+    ndbi_proxy = (b04 - b08) / (b04 + b08 + 1e-6)
+    buildup_png = OUTPUT_DIR / f"{stem}_urban_buildup.png"
+    _save_colormap_png(ndbi_proxy, buildup_png, cmap_name="hot", vmin=-0.5, vmax=0.5)
+
+    # 2. Road Density — Laplacian of RGB luminance
+    lum = 0.299 * b04 + 0.587 * b03 + 0.114 * b02
+    road_edges = _sobel_edges(lum)
+    road_norm = np.clip(road_edges / (np.percentile(road_edges, 98) + 1e-6), 0.0, 1.0)
+    road_png = OUTPUT_DIR / f"{stem}_urban_roads.png"
+    _save_colormap_png(road_norm, road_png, cmap_name="gray", vmin=0.0, vmax=1.0)
+
+    # 3. Impervious Surface (high B04 + low B08 → concrete/asphalt)
+    impervious = np.clip((b04 - 0.05) / 0.35, 0.0, 1.0) * np.clip(1.0 - b08 / 0.4, 0.0, 1.0)
+    imperv_png = OUTPUT_DIR / f"{stem}_urban_impervious.png"
+    _save_colormap_png(impervious, imperv_png, cmap_name="Reds", vmin=0.0, vmax=1.0)
+
+    # 4. Urban Greenery (NDVI in low-NDBI zones)
+    ndvi = (b08 - b04) / (b08 + b04 + 1e-6)
+    urban_green = np.where(ndbi_proxy < 0.0, np.clip(ndvi, 0, 1), 0.0)
+    green_png = OUTPUT_DIR / f"{stem}_urban_greenery.png"
+    _save_colormap_png(urban_green, green_png, cmap_name="Greens", vmin=0.0, vmax=0.8)
+
+    # 5. Population Density Proxy (local variance = texture measure)
+    from scipy.ndimage import uniform_filter
+    lum_mean = uniform_filter(lum, size=7)
+    lum_sq_mean = uniform_filter(lum ** 2, size=7)
+    texture = np.sqrt(np.clip(lum_sq_mean - lum_mean ** 2, 0, None))
+    texture_norm = np.clip(texture / (np.percentile(texture, 98) + 1e-6), 0.0, 1.0)
+    density_png = OUTPUT_DIR / f"{stem}_urban_density.png"
+    _save_colormap_png(texture_norm, density_png, cmap_name="YlOrRd", vmin=0.0, vmax=1.0)
+
+    # Stats
+    buildup_pct    = float(np.mean(ndbi_proxy > 0.05) * 100)
+    impervious_pct = float(np.mean(impervious > 0.3) * 100)
+    greenery_pct   = float(np.mean(urban_green > 0.2) * 100)
+    road_density   = float(np.mean(road_norm))
+
+    return {
+        "buildup_map":    buildup_png.name,
+        "roads_map":      road_png.name,
+        "impervious_map": imperv_png.name,
+        "greenery_map":   green_png.name,
+        "density_map":    density_png.name,
+        "stats": {
+            "buildup_pct":    round(buildup_pct, 1),
+            "impervious_pct": round(impervious_pct, 1),
+            "greenery_pct":   round(greenery_pct, 1),
+            "road_density":   round(road_density * 100, 2),
+        }
+    }
+
+
+def _run_disaster_analysis(sr_arr: np.ndarray, stem: str) -> dict:
+    """
+    Disaster Assessment:
+    1. Flood Extent Map (NDWI > 0.3 threshold)
+    2. Damage Severity Map (texture anomaly)
+    3. Road Accessibility Map (linear feature extraction)
+    4. Relief Zone Finder (flat open low-texture areas)
+    5. Surface Anomaly Map (spectral deviation)
+    Band layout: B02=0, B03=1, B04=2, B08=3
+    """
+    b02, b03, b04, b08 = sr_arr[0], sr_arr[1], sr_arr[2], sr_arr[3]
+
+    # 1. Flood Extent (NDWI = (B03-B08)/(B03+B08))
+    ndwi = (b03 - b08) / (b03 + b08 + 1e-6)
+    flood_mask = np.clip(ndwi, -0.2, 1.0)
+    flood_png = OUTPUT_DIR / f"{stem}_disaster_flood.png"
+    _save_colormap_png(flood_mask, flood_png, cmap_name="Blues", vmin=-0.2, vmax=0.6)
+
+    # 2. Damage Severity Map (high texture variance = debris/damage)
+    from scipy.ndimage import uniform_filter
+    lum = 0.299 * b04 + 0.587 * b03 + 0.114 * b02
+    lum_mean = uniform_filter(lum, size=5)
+    lum_sq_mean = uniform_filter(lum ** 2, size=5)
+    damage_texture = np.sqrt(np.clip(lum_sq_mean - lum_mean ** 2, 0, None))
+    # Normalize and classify into severity
+    p80 = np.percentile(damage_texture, 80)
+    p95 = np.percentile(damage_texture, 95)
+    severity = np.where(damage_texture > p95, 1.0,
+               np.where(damage_texture > p80, 0.5, 0.1))
+    damage_png = OUTPUT_DIR / f"{stem}_disaster_damage.png"
+    _save_colormap_png(severity, damage_png, cmap_name="RdYlGn_r", vmin=0.0, vmax=1.0)
+
+    # 3. Road Accessibility Map (linear features via Sobel edges, thresholded)
+    road_edges = _sobel_edges(lum)
+    road_norm = np.clip(road_edges / (np.percentile(road_edges, 97) + 1e-6), 0.0, 1.0)
+    # Roads are blocked where flood AND high edges coexist
+    blocked = np.where((ndwi > 0.1) & (road_norm > 0.3), 1.0, 0.0)
+    accessible = np.where((road_norm > 0.3) & (ndwi <= 0.1), 0.5, 0.0)
+    road_status = blocked + accessible  # 1.0=blocked, 0.5=clear
+    road_acc_png = OUTPUT_DIR / f"{stem}_disaster_roads.png"
+    _save_colormap_png(road_status, road_acc_png, cmap_name="RdYlGn", vmin=0.0, vmax=1.0)
+
+    # 4. Relief Zone Finder (low texture + not flooded + flat = open ground)
+    relief = np.where(
+        (damage_texture < np.percentile(damage_texture, 40)) &  # low texture
+        (ndwi < 0.0) &                                           # not flooded
+        (lum > np.percentile(lum, 20)),                          # visible surface
+        1.0, 0.0
+    )
+    relief_png = OUTPUT_DIR / f"{stem}_disaster_relief.png"
+    _save_colormap_png(relief, relief_png, cmap_name="YlGn", vmin=0.0, vmax=1.0)
+
+    # 5. Surface Anomaly Map (deviation from expected spectral profile)
+    # High B04/B03 ratio with low NIR = burned/bare
+    spectral_ratio = (b04 + 1e-6) / (b08 + 1e-6)
+    anomaly = np.clip(spectral_ratio - 0.5, 0, 2.0) / 2.0
+    anomaly_png = OUTPUT_DIR / f"{stem}_disaster_anomaly.png"
+    _save_colormap_png(anomaly, anomaly_png, cmap_name="hot", vmin=0.0, vmax=1.0)
+
+    # Stats
+    flooded_pct     = float(np.mean(ndwi > 0.3) * 100)
+    severe_pct      = float(np.mean(severity > 0.8) * 100)
+    blocked_pct     = float(np.mean(blocked > 0.5) * 100)
+    relief_zone_pct = float(np.mean(relief > 0.5) * 100)
+    ndwi_mean       = float(np.mean(ndwi))
+
+    return {
+        "flood_map":   flood_png.name,
+        "damage_map":  damage_png.name,
+        "roads_map":   road_acc_png.name,
+        "relief_map":  relief_png.name,
+        "anomaly_map": anomaly_png.name,
+        "stats": {
+            "flooded_pct":     round(flooded_pct, 1),
+            "severe_dmg_pct":  round(severe_pct, 1),
+            "blocked_roads_pct": round(blocked_pct, 1),
+            "relief_zones_pct": round(relief_zone_pct, 1),
+            "ndwi_mean":       round(ndwi_mean, 3),
+            "water_status": "⚠️ Active flooding detected" if flooded_pct > 5 else
+                            "🟡 Waterlogging risk zones present" if flooded_pct > 1 else
+                            "✅ No significant flood water detected",
+        }
+    }
+
+
+@app.post("/api/analyze/{tile_id}")
+def analyze_tile(tile_id: str, domain: str = "crop"):
+    """
+    Domain-specific analysis on SR output.
+    domain: 'crop' | 'urban' | 'disaster' | 'all'
+    Returns colorized analysis PNGs with per-domain statistics.
+    """
+    # Find the SR GeoTIFF (prefer ESRGAN, fallback to LDSR)
+    sr_tif = OUTPUT_DIR / f"{tile_id}_esr_enhanced_2.5m.tif"
+    if not sr_tif.exists():
+        sr_tif = OUTPUT_DIR / f"{tile_id}_enhanced_2.5m.tif"
+    if not sr_tif.exists():
+        raise HTTPException(400,
+            "Run Super-Resolution first before analyzing. "
+            f"Expected: {tile_id}_esr_enhanced_2.5m.tif")
+
+    try:
+        with rasterio.open(sr_tif) as src:
+            sr_arr = src.read().astype(np.float32)
+
+        stem = tile_id
+        domain = domain.lower()
+        response = {"tile_id": tile_id, "domain": domain}
+
+        if domain in ("crop", "all"):
+            crop_result = _run_crop_analysis(sr_arr, stem)
+            response["crop"] = {
+                "ndvi_map":       f"/tiles/{crop_result['ndvi_map']}",
+                "boundary_map":   f"/tiles/{crop_result['boundary_map']}",
+                "stress_map":     f"/tiles/{crop_result['stress_map']}",
+                "irrigation_map": f"/tiles/{crop_result['irrigation_map']}",
+                "canopy_map":     f"/tiles/{crop_result['canopy_map']}",
+                "stats":          crop_result["stats"],
+            }
+
+        if domain in ("urban", "all"):
+            urban_result = _run_urban_analysis(sr_arr, stem)
+            response["urban"] = {
+                "buildup_map":    f"/tiles/{urban_result['buildup_map']}",
+                "roads_map":      f"/tiles/{urban_result['roads_map']}",
+                "impervious_map": f"/tiles/{urban_result['impervious_map']}",
+                "greenery_map":   f"/tiles/{urban_result['greenery_map']}",
+                "density_map":    f"/tiles/{urban_result['density_map']}",
+                "stats":          urban_result["stats"],
+            }
+
+        if domain in ("disaster", "all"):
+            disaster_result = _run_disaster_analysis(sr_arr, stem)
+            response["disaster"] = {
+                "flood_map":   f"/tiles/{disaster_result['flood_map']}",
+                "damage_map":  f"/tiles/{disaster_result['damage_map']}",
+                "roads_map":   f"/tiles/{disaster_result['roads_map']}",
+                "relief_map":  f"/tiles/{disaster_result['relief_map']}",
+                "anomaly_map": f"/tiles/{disaster_result['anomaly_map']}",
+                "stats":       disaster_result["stats"],
+            }
+
+        log.info(f"Analysis [{domain}] for {tile_id} complete ✓")
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Analysis error: {e}", exc_info=True)
+        raise HTTPException(500, f"Analysis failed: {e}")
+
+
 @app.post("/api/cancel")
 def cancel_processing():
     """Cancel any ongoing SR inference."""

@@ -187,7 +187,7 @@ function applyPreset(p) {
 // PANEL NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function showPanel(name) {
-  const panels = ['map', 'compare', 'model-cmp', 'metrics', 'apps', 'info'];
+  const panels = ['map', 'compare', 'model-cmp', 'metrics', 'apps', 'analysis', 'info'];
   panels.forEach(function(p) {
     const el  = document.getElementById('panel-' + p);
     const lnk = document.getElementById('nav-' + p);
@@ -359,6 +359,9 @@ async function runSR() {
     }
 
     document.getElementById('btn-validate').disabled = false;
+    // Enable analysis button now that SR is done
+    const btnAnalysis = document.getElementById('btn-run-analysis');
+    if (btnAnalysis) btnAnalysis.disabled = false;
     setStatus('done', 'Complete');
   } catch (e) {
     if (e.message && (e.message.toLowerCase().includes('cancel') || e.message.includes('499'))) {
@@ -916,6 +919,125 @@ function drawTrainingChart(history) {
   ctx.font      = '11px "JetBrains Mono", monospace';
   ctx.fillText('PEAK: ' + psnrs[psnrs.length-1].toFixed(2) + ' dB', 12, 18);
   ctx.fillText('EPOCH ' + history[history.length-1].epoch, W - 70, 18);
+}
+
+// ════════════════════════════════════════════════════════════
+// DOMAIN ANALYSIS
+// ════════════════════════════════════════════════════════════
+let currentAnalysisData = {};
+
+function switchDomainTab(domain) {
+  ['crop', 'urban', 'disaster'].forEach(function(d) {
+    const tab   = document.getElementById('dtab-' + d);
+    const panel = document.getElementById('domain-' + d);
+    if (tab)   tab.classList.toggle('active', d === domain);
+    if (panel) panel.style.display = (d === domain) ? 'block' : 'none';
+  });
+}
+
+async function runAnalysis(domain) {
+  if (!currentTileId) {
+    log('[WARN] Fetch a tile and run SR first.', 'warn');
+    return;
+  }
+
+  log('[ANALYSIS] Running ' + domain + ' analysis…', 'info');
+  setStatus('active', 'Analyzing…');
+  showSpinner('Domain Analysis…', 'Computing ' + domain + ' layers from 2.5m SR output');
+  disableButtons(true);
+
+  try {
+    const res = await fetch(API + '/api/analyze/' + currentTileId + '?domain=' + domain, {
+      method: 'POST'
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Analysis failed');
+    }
+    const data = await res.json();
+    currentAnalysisData = Object.assign(currentAnalysisData, data);
+
+    populateAnalysis(data, domain);
+    log('[ANALYSIS] ' + domain.toUpperCase() + ' analysis complete ✓', 'ok');
+    setStatus('done', 'Analysis Done');
+
+    // Switch to the relevant tab
+    if (domain !== 'all') switchDomainTab(domain);
+    showPanel('analysis');
+  } catch (e) {
+    log('[ERROR] Analysis: ' + e.message, 'error');
+    setStatus('error', 'Analysis Error');
+  } finally {
+    hideSpinner();
+    disableButtons(false);
+    document.getElementById('btn-sr').disabled = !currentTileId;
+    const btnA = document.getElementById('btn-run-analysis');
+    if (btnA) btnA.disabled = false;
+  }
+}
+
+function _setAnalysisImg(imgId, plhId, url) {
+  const img = document.getElementById(imgId);
+  const plh = document.getElementById(plhId);
+  if (img && url) {
+    img.src = url;
+    img.style.display = 'block';
+    if (plh) plh.style.display = 'none';
+  }
+}
+
+function _setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function populateAnalysis(data, domain) {
+  if ((domain === 'crop' || domain === 'all') && data.crop) {
+    const c = data.crop;
+    const s = c.stats;
+    _setAnalysisImg('aimg-crop-ndvi',       'acard-preview-crop-ndvi', c.ndvi_map);
+    _setAnalysisImg('aimg-crop-boundary',   'apl-crop-boundary',       c.boundary_map);
+    _setAnalysisImg('aimg-crop-stress',     'apl-crop-stress',         c.stress_map);
+    _setAnalysisImg('aimg-crop-irrigation', 'apl-crop-irrigation',     c.irrigation_map);
+    _setAnalysisImg('aimg-crop-canopy',     'apl-crop-canopy',         c.canopy_map);
+    _setText('ast-mean-ndvi',    s.mean_ndvi);
+    _setText('ast-healthy-pct', s.healthy_pct + '%');
+    _setText('ast-mod-pct',     s.moderate_pct + '%');
+    _setText('ast-stressed-pct', s.stressed_pct + '%');
+    _setText('ast-irrigated-pct', s.irrigated_pct + '%');
+    log('[CROP] NDVI=' + s.mean_ndvi + '  Stressed=' + s.stressed_pct + '%  Healthy=' + s.healthy_pct + '%', 'info');
+  }
+
+  if ((domain === 'urban' || domain === 'all') && data.urban) {
+    const u = data.urban;
+    const s = u.stats;
+    _setAnalysisImg('aimg-urban-buildup',    'apl-urban-buildup',    u.buildup_map);
+    _setAnalysisImg('aimg-urban-roads',      'apl-urban-roads',      u.roads_map);
+    _setAnalysisImg('aimg-urban-impervious', 'apl-urban-impervious', u.impervious_map);
+    _setAnalysisImg('aimg-urban-greenery',   'apl-urban-greenery',   u.greenery_map);
+    _setAnalysisImg('aimg-urban-density',    'apl-urban-density',    u.density_map);
+    _setText('ast-buildup-pct',  s.buildup_pct + '%');
+    _setText('ast-imperv-pct',   s.impervious_pct + '%');
+    _setText('ast-road-density', s.road_density + '%');
+    _setText('ast-greenery-pct', s.greenery_pct + '%');
+    log('[URBAN] Built-up=' + s.buildup_pct + '%  Impervious=' + s.impervious_pct + '%  Green=' + s.greenery_pct + '%', 'info');
+  }
+
+  if ((domain === 'disaster' || domain === 'all') && data.disaster) {
+    const d = data.disaster;
+    const s = d.stats;
+    _setAnalysisImg('aimg-disaster-flood',   'apl-disaster-flood',   d.flood_map);
+    _setAnalysisImg('aimg-disaster-damage',  'apl-disaster-damage',  d.damage_map);
+    _setAnalysisImg('aimg-disaster-roads',   'apl-disaster-roads',   d.roads_map);
+    _setAnalysisImg('aimg-disaster-relief',  'apl-disaster-relief',  d.relief_map);
+    _setAnalysisImg('aimg-disaster-anomaly', 'apl-disaster-anomaly', d.anomaly_map);
+    _setText('ast-flooded-pct',  s.flooded_pct + '%');
+    _setText('ast-severe-pct',   s.severe_dmg_pct + '%');
+    _setText('ast-blocked-pct',  s.blocked_roads_pct + '%');
+    _setText('ast-relief-pct',   s.relief_zones_pct + '%');
+    _setText('ast-water-status', s.water_status);
+    log('[DISASTER] Flooded=' + s.flooded_pct + '%  Severe=' + s.severe_dmg_pct + '%  ' + s.water_status, 'info');
+  }
 }
 
 // ════════════════════════════════════════════════════════════
