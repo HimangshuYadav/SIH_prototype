@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="style.css?v=v9-scientific" />
+  <link rel="stylesheet" href="style.css?v=v10-compare-fix" />
 </head>
 <body>
 
@@ -510,6 +510,9 @@
         <svg class="placeholder-svg"><use href="#icon-compare"></use></svg>
         <h3>No Processed Tile In Memory</h3>
         <p>Select a geographic AOI and execute super-resolution to inspect spatial enhancement and spectral signatures.</p>
+        <button class="btn-primary" style="margin-top:0.75rem" onclick="loadSampleTile()">
+          <svg class="btn-svg"><use href="#icon-satellite"></use></svg> Load Reference Calibration Tile
+        </button>
       </div>
 
       <div class="compare-images" id="compare-images" style="display:none">
@@ -531,7 +534,10 @@
           <span class="label-dot sr"></span> 2.5m Synthesized
         </div>
         <div class="slider-track" id="slider-track">
+          <span class="slider-lbl">10m LR</span>
           <input type="range" id="compare-slider" min="0" max="100" value="50" oninput="updateCompare(this.value)" />
+          <span class="slider-lbl">2.5m SR</span>
+          <span class="slider-pct mono" id="compare-pct">50%</span>
         </div>
       </div>
 
@@ -1447,6 +1453,6 @@
   </div>
 </div>
 
-<script src="app.js?v=v9-scientific"></script>
+<script src="app.js?v=v10-compare-fix"></script>
 </body>
 </html>

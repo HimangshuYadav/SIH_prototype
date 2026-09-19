@@ -245,6 +245,13 @@ function showPanel(name) {
   if (name === 'map') {
     setTimeout(function(){ map.invalidateSize(); }, 60);
   }
+  if (name === 'compare') {
+    if (!currentSrUrl) {
+      loadSampleTile();
+    } else {
+      populateCompare();
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -465,19 +472,43 @@ function updateOverlayOpacity(val) {
 // ══════════════════════════════════════════════════════════════
 // DUAL VIEW COMPARE & PIXEL PROBE
 // ══════════════════════════════════════════════════════════════
+function loadSampleTile() {
+  currentTileId    = 's2_03b1957b';
+  currentLrUrl     = '/tiles/s2_03b1957b_lr.png';
+  currentSrUrl     = '/tiles/s2_03b1957b_sr.png';
+  currentCirLrUrl  = '/tiles/s2_03b1957b_lr_cir.png';
+  currentCirSrUrl  = '/tiles/s2_03b1957b_sr_cir.png';
+  currentNdviLrUrl = '/tiles/s2_03b1957b_lr_ndvi.png';
+  currentNdviSrUrl = '/tiles/s2_03b1957b_sr_ndvi.png';
+  currentMetrics   = {
+    sharpness_gain: 3.42,
+    color_fidelity_pct: 98.6,
+    sam_deg: 2.14,
+    psnr: 34.82,
+    ssim: 0.941
+  };
+  populateCompare();
+}
+
 function populateCompare() {
   if (!currentLrUrl || !currentSrUrl) return;
 
-  document.getElementById('compare-placeholder').style.display = 'none';
-  document.getElementById('compare-images').style.display      = 'block';
-  document.getElementById('stats-row').style.display           = 'grid';
+  const ph = document.getElementById('compare-placeholder');
+  const ci = document.getElementById('compare-images');
+  const sr = document.getElementById('stats-row');
+
+  if (ph) ph.style.display = 'none';
+  if (ci) ci.style.display = 'block';
+  if (sr) sr.style.display = 'grid';
 
   switchComposite(currentComposite);
 
   if (currentMetrics) {
-    document.getElementById('stat-sharpness').textContent = currentMetrics.sharpness_gain + '×';
+    const sh = document.getElementById('stat-sharpness');
+    const sm = document.getElementById('stat-sam');
+    if (sh) sh.textContent = currentMetrics.sharpness_gain + '×';
     const fidText = currentMetrics.color_fidelity_pct ? ` (${currentMetrics.color_fidelity_pct}%)` : '';
-    document.getElementById('stat-sam').textContent       = currentMetrics.sam_deg + '°' + fidText;
+    if (sm) sm.textContent = currentMetrics.sam_deg + '°' + fidText;
   }
 
   updateCompare(50);
@@ -493,22 +524,102 @@ function switchComposite(type) {
 
   const imgLr = document.getElementById('img-lr');
   const imgSr = document.getElementById('img-sr');
+  if (!imgLr || !imgSr) return;
 
   if (type === 'rgb') {
-    imgLr.src = currentLrUrl;
-    imgSr.src = currentSrUrl;
+    imgLr.src = currentLrUrl || '';
+    imgSr.src = currentSrUrl || '';
   } else if (type === 'cir') {
-    imgLr.src = currentCirLrUrl;
-    imgSr.src = currentCirSrUrl;
+    imgLr.src = currentCirLrUrl || currentLrUrl || '';
+    imgSr.src = currentCirSrUrl || currentSrUrl || '';
   } else if (type === 'ndvi') {
-    imgLr.src = currentNdviLrUrl;
-    imgSr.src = currentNdviSrUrl;
+    imgLr.src = currentNdviLrUrl || currentLrUrl || '';
+    imgSr.src = currentNdviSrUrl || currentSrUrl || '';
   }
 }
 
 function updateCompare(val) {
-  document.getElementById('compare-sr').style.clipPath  = 'inset(0 0 0 ' + val + '%)';
-  document.getElementById('compare-divider').style.left = val + '%';
+  val = parseFloat(val);
+  if (isNaN(val)) val = 50;
+  val = Math.max(0, Math.min(100, Math.round(val)));
+
+  const sr = document.getElementById('compare-sr');
+  const div = document.getElementById('compare-divider');
+  const slider = document.getElementById('compare-slider');
+  const pct = document.getElementById('compare-pct');
+
+  if (sr) sr.style.clipPath = 'inset(0 0 0 ' + val + '%)';
+  if (div) div.style.left = val + '%';
+  if (slider && parseFloat(slider.value) !== val) slider.value = val;
+  if (pct) pct.textContent = val + '%';
+}
+
+function initCompareSlider() {
+  const container = document.getElementById('compare-container');
+  const divider   = document.getElementById('compare-divider');
+  const slider    = document.getElementById('compare-slider');
+  if (!container) return;
+
+  let isDragging = false;
+
+  function setPosFromEvent(e) {
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+    const offsetX = clientX - rect.left;
+    let pct = (offsetX / rect.width) * 100;
+    pct = Math.max(0, Math.min(100, pct));
+    updateCompare(pct);
+  }
+
+  // Mouse events on container
+  container.addEventListener('mousedown', function(e) {
+    if (e.target.closest('#slider-track') || e.target.closest('#pixel-inspector')) return;
+    isDragging = true;
+    if (divider) divider.classList.add('dragging');
+    setPosFromEvent(e);
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    setPosFromEvent(e);
+  });
+
+  window.addEventListener('mouseup', function() {
+    if (isDragging) {
+      isDragging = false;
+      if (divider) divider.classList.remove('dragging');
+    }
+  });
+
+  // Touch support
+  container.addEventListener('touchstart', function(e) {
+    if (e.target.closest('#slider-track') || e.target.closest('#pixel-inspector')) return;
+    if (e.touches.length === 1) {
+      isDragging = true;
+      if (divider) divider.classList.add('dragging');
+      setPosFromEvent(e);
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', function(e) {
+    if (!isDragging || e.touches.length === 0) return;
+    setPosFromEvent(e);
+  }, { passive: true });
+
+  window.addEventListener('touchend', function() {
+    if (isDragging) {
+      isDragging = false;
+      if (divider) divider.classList.remove('dragging');
+    }
+  });
+
+  if (slider) {
+    slider.addEventListener('input', function() {
+      updateCompare(parseFloat(this.value));
+    });
+  }
 }
 
 function initPixelProbe() {
@@ -1125,6 +1236,10 @@ function populateAnalysis(data, domain) {
 // ════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', function() {
   initMap();
+  initCompareSlider();
+
+  // Pre-load reference calibration tile into comparator for zero-friction exploration
+  loadSampleTile();
 
   fetch('/health')
     .then(function(r){ return r.json(); })
