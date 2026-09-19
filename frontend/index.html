@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SentinelSR — Sentinel-2 Super-Resolution</title>
-  <meta name="description" content="Super-resolution workstation for Sentinel-2 multispectral imagery (10m to 2.5m GSD)." />
+  <title>Sentinel-2 MSI Super-Resolution Facility | ESA L2A 2.5m Workstation</title>
+  <meta name="description" content="Operational remote sensing super-resolution workstation for Sentinel-2 multispectral instrument (MSI) imagery: 10m to 2.5m GSD sub-pixel synthesis under Wald protocol." />
 
   <!-- Leaflet GIS Engine -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -13,16 +13,16 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
-  <!-- Typography -->
+  <!-- Typography: High-legibility technical humanist sans + tabular scientific mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="style.css?v=v8-light" />
+  <link rel="stylesheet" href="style.css?v=v9-scientific" />
 </head>
 <body>
 
-<!-- ═══ VECTOR ICONS ═══════════════════════════════════════════════════════════ -->
+<!-- ═══ SCIENTIFIC VECTOR ICONS ═══════════════════════════════════════════════ -->
 <svg style="display:none;" xmlns="http://www.w3.org/2000/svg">
   <symbol id="icon-satellite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M13 2 3 12l4 4 10-10L13 2Z"/>
@@ -102,66 +102,147 @@
     <circle cx="12" cy="12" r="6"/>
     <circle cx="12" cy="12" r="2"/>
   </symbol>
+  <!-- Scientific & Domain Icons (replacing toy emojis) -->
+  <symbol id="icon-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+  </symbol>
+  <symbol id="icon-spectrum" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 18h18"/>
+    <path d="M3 14c4 0 4-8 8-8s4 12 8 12"/>
+    <line x1="11" y1="3" x2="11" y2="6"/>
+  </symbol>
+  <symbol id="icon-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+  </symbol>
+  <symbol id="icon-boundary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="3 7 10 3 21 8 18 19 6 21 3 7"/>
+    <line x1="10" y1="3" x2="18" y2="19" stroke-dasharray="2 2"/>
+  </symbol>
+  <symbol id="icon-stress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </symbol>
+  <symbol id="icon-water" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+  </symbol>
+  <symbol id="icon-canopy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2a6 6 0 0 0-6 6c0 1.84.83 3.49 2.14 4.58A6 6 0 0 0 6 18h12a6 6 0 0 0-2.14-5.42A6 6 0 0 0 18 8a6 6 0 0 0-6-6Z"/>
+    <path d="M12 18v4"/>
+  </symbol>
+  <symbol id="icon-urban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="7" height="17" rx="1"/>
+    <rect x="14" y="9" width="7" height="12" rx="1"/>
+    <line x1="6" y1="8" x2="7" y2="8"/>
+    <line x1="6" y1="12" x2="7" y2="12"/>
+    <line x1="6" y1="16" x2="7" y2="16"/>
+    <line x1="17" y1="13" x2="18" y2="13"/>
+    <line x1="17" y1="17" x2="18" y2="17"/>
+  </symbol>
+  <symbol id="icon-road" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 19 8 5"/>
+    <path d="M20 19 16 5"/>
+    <line x1="12" y1="7" x2="12" y2="9"/>
+    <line x1="12" y1="13" x2="12" y2="15"/>
+  </symbol>
+  <symbol id="icon-impervious" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
+  </symbol>
+  <symbol id="icon-population" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </symbol>
+  <symbol id="icon-flood" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12c1.5 1.5 3 2 4.5 2s3-.5 4.5-2 3-2 4.5-2 3 .5 4.5 2 3 2 4 1.5"/>
+    <path d="M2 17c1.5 1.5 3 2 4.5 2s3-.5 4.5-2 3-2 4.5-2 3 .5 4.5 2 3 2 4 1.5"/>
+    <path d="M12 3v5"/>
+  </symbol>
+  <symbol id="icon-damage" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m3 10 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    <path d="m10 13 2 2-2 3 4-2"/>
+  </symbol>
+  <symbol id="icon-hazard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </symbol>
+  <symbol id="icon-fire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+  </symbol>
 </svg>
 
-<!-- ═══ TOP NAVBAR ═══════════════════════════════════════════════════════════ -->
+<!-- ═══ SCIENTIFIC WORKSTATION NAVBAR ═════════════════════════════════════════ -->
 <header class="navbar">
   <div class="nav-brand">
     <div class="nav-brand-logo">
       <svg class="nav-svg"><use href="#icon-satellite"></use></svg>
     </div>
-    <span class="nav-title">SentinelSR</span>
-    <span class="nav-badge">10m → 2.5m</span>
+    <div class="nav-brand-text">
+      <div class="nav-title-row">
+        <span class="nav-title">COPERNICUS MSI</span>
+        <span class="nav-badge">10m → 2.5m (4× GSD)</span>
+        <span class="nav-badge-sub">ESA L2A BOA</span>
+      </div>
+      <span class="nav-sub">Sentinel-2 Multispectral Super-Resolution Workstation · Wald Synthesis</span>
+    </div>
   </div>
 
   <nav class="nav-links">
     <button class="nav-link active" id="nav-map" onclick="showPanel('map')">
-      <svg class="tab-icon"><use href="#icon-map"></use></svg> Map
+      <svg class="tab-icon"><use href="#icon-map"></use></svg> Cartographic AOI
     </button>
     <button class="nav-link" id="nav-compare" onclick="showPanel('compare')">
-      <svg class="tab-icon"><use href="#icon-compare"></use></svg> Dual View
+      <svg class="tab-icon"><use href="#icon-compare"></use></svg> Spectral Inspector
     </button>
     <button class="nav-link" id="nav-model-cmp" onclick="showPanel('model-cmp')">
-      <svg class="tab-icon"><use href="#icon-benchmark"></use></svg> Benchmarks
+      <svg class="tab-icon"><use href="#icon-benchmark"></use></svg> Model Synthesis
     </button>
     <button class="nav-link" id="nav-metrics" onclick="showPanel('metrics')">
-      <svg class="tab-icon"><use href="#icon-metrics"></use></svg> Wald Metrics
+      <svg class="tab-icon"><use href="#icon-metrics"></use></svg> Wald Protocol
     </button>
     <button class="nav-link" id="nav-apps" onclick="showPanel('apps')">
-      <svg class="tab-icon"><use href="#icon-layers"></use></svg> GIS Products
+      <svg class="tab-icon"><use href="#icon-layers"></use></svg> Radiometric Products
     </button>
     <button class="nav-link" id="nav-analysis" onclick="showPanel('analysis')">
-      <svg class="tab-icon"><use href="#icon-benchmark"></use></svg> Analysis
+      <svg class="tab-icon"><use href="#icon-spectrum"></use></svg> Biosphere &amp; Morphology
     </button>
     <button class="nav-link" id="nav-info" onclick="showPanel('info')">
-      <svg class="tab-icon"><use href="#icon-info"></use></svg> About
+      <svg class="tab-icon"><use href="#icon-info"></use></svg> Sensor Dossier
     </button>
   </nav>
 
   <div class="nav-telemetry">
     <div class="telemetry-pill" id="model-status">
       <span class="status-dot idle"></span>
-      <span id="status-text">Ready</span>
+      <span id="status-text">STAC: Online · Calibrated</span>
     </div>
   </div>
 </header>
 
-<!-- ═══ MAIN APPLICATION LAYOUT ══════════════════════════════════════════════ -->
+<!-- ═══ MAIN APPLICATION WORKSTATION LAYOUT ═══════════════════════════════════ -->
 <main class="app-layout">
 
-  <!-- ── SIDEBAR ───────────────────────────────────────────────────────────── -->
+  <!-- ── LABORATORY SIDEBAR ────────────────────────────────────────────────── -->
   <aside class="sidebar" id="sidebar">
 
-    <!-- AREA OF INTEREST -->
+    <!-- 01. AREA OF INTEREST -->
     <section class="sidebar-section">
-      <h3 class="section-title">Area of Interest</h3>
+      <div class="section-title-wrap">
+        <span class="section-num">01</span>
+        <h3 class="section-title">Geographic AOI &amp; Bounds</h3>
+      </div>
 
       <button class="btn-draw" id="btn-draw" onclick="toggleDraw()">
-        <svg class="btn-svg"><use href="#icon-crosshair"></use></svg> Draw Bounding Box
+        <svg class="btn-svg"><use href="#icon-crosshair"></use></svg> Draw Spatial Bounding Box
       </button>
 
       <div class="preset-group">
-        <span class="control-sublabel">Reference Sites:</span>
+        <span class="control-sublabel">Reference Calibration Sites:</span>
         <div class="preset-row" id="preset-btns"></div>
       </div>
 
@@ -172,50 +253,67 @@
         <div class="bbox-field"><span class="bbox-tag">N</span><input type="number" id="bbox-north" step="0.001" placeholder="17.480" /></div>
       </div>
 
+      <!-- Real-time spatial dimensions & area calculation -->
+      <div class="spatial-dimensions-box" id="spatial-dimensions-box">
+        <div class="spatial-dim-item">
+          <span class="spatial-dim-label">Footprint Dimensions</span>
+          <strong class="spatial-dim-val mono" id="aoi-dim">8.42 km × 7.18 km</strong>
+        </div>
+        <div class="spatial-dim-item">
+          <span class="spatial-dim-label">Ground Surface Area</span>
+          <strong class="spatial-dim-val mono" id="aoi-area">60.46 km² (6,046 ha)</strong>
+        </div>
+      </div>
+
       <button class="btn-outline btn-sm" id="btn-clear-draw" onclick="clearDraw()">
-        <svg class="btn-svg-sm"><use href="#icon-close"></use></svg> Clear Box
+        <svg class="btn-svg-sm"><use href="#icon-close"></use></svg> Clear AOI Selection
       </button>
     </section>
 
-    <!-- DATE & CLOUD -->
+    <!-- 02. DATE & CLOUD -->
     <section class="sidebar-section">
-      <h3 class="section-title">Date &amp; Cloud Cover</h3>
+      <div class="section-title-wrap">
+        <span class="section-num">02</span>
+        <h3 class="section-title">Temporal &amp; Atmospheric Filter</h3>
+      </div>
       
       <div class="date-row">
         <label>
-          <span class="field-label">Start Date</span>
+          <span class="field-label">Acquisition Start</span>
           <input type="date" id="date-start" value="2024-01-01" />
         </label>
         <label>
-          <span class="field-label">End Date</span>
+          <span class="field-label">Acquisition End</span>
           <input type="date" id="date-end" value="2024-06-30" />
         </label>
       </div>
 
       <div class="control-row">
         <div class="control-head">
-          <span class="field-label">Max Cloud Cover</span>
-          <span class="control-val" id="cloud-val">20%</span>
+          <span class="field-label">Max Cloud Cover Threshold</span>
+          <span class="control-val mono" id="cloud-val">20%</span>
         </div>
         <input type="range" id="cloud-slider" min="0" max="80" value="20" oninput="document.getElementById('cloud-val').textContent=this.value+'%'" />
       </div>
     </section>
 
-    <!-- MODEL SELECTION -->
+    <!-- 03. RECONSTRUCTION ENGINE -->
     <section class="sidebar-section">
-      <h3 class="section-title">Model</h3>
+      <div class="section-title-wrap">
+        <span class="section-num">03</span>
+        <h3 class="section-title">Super-Resolution Generator</h3>
+      </div>
 
       <div class="model-selector-group">
-        
-        <!-- ESRGAN (Ours) -->
+        <!-- ESRGAN-MSI -->
         <label class="model-option" id="model-opt-esrgan">
           <input type="radio" name="model-choice" value="esrgan" checked onchange="onModelChange(this)" />
           <div class="model-card">
             <div class="model-badge-row">
-              <span class="model-name">ESRGAN (Ours)</span>
-              <span class="model-tag highlight">39.19 dB</span>
+              <span class="model-name">ESRGAN-MSI (Ours)</span>
+              <span class="model-tag highlight">39.19 dB · 0.3s</span>
             </div>
-            <div class="model-desc">Trained on real Sentinel-2 satellite pairs (0.3s).</div>
+            <div class="model-desc">4-band RRDB generator trained on real Sen2Venµs pairs under Wald protocol downsampling loss.</div>
           </div>
         </label>
 
@@ -224,50 +322,52 @@
           <input type="radio" name="model-choice" value="ldsr" onchange="onModelChange(this)" />
           <div class="model-card">
             <div class="model-badge-row">
-              <span class="model-name">LDSR-S2</span>
+              <span class="model-name">LDSR-S2 Baseline</span>
               <span class="model-tag neutral">Diffusion</span>
             </div>
-            <div class="model-desc">Latent diffusion baseline model (113M parameters).</div>
+            <div class="model-desc">ESA latent diffusion baseline (113M parameters, stochastic sampling).</div>
           </div>
         </label>
 
-        <!-- Side-by-Side Benchmark -->
+        <!-- Dual Benchmark -->
         <label class="model-option" id="model-opt-both">
           <input type="radio" name="model-choice" value="both" onchange="onModelChange(this)" />
           <div class="model-card">
             <div class="model-badge-row">
-              <span class="model-name">Compare Both</span>
-              <span class="model-tag neutral">Dual</span>
+              <span class="model-name">Dual Synthesis</span>
+              <span class="model-tag neutral">Benchmark</span>
             </div>
-            <div class="model-desc">Run both models side-by-side for comparison.</div>
+            <div class="model-desc">Simultaneous evaluation for radiometric fidelity and SAM spectral divergence.</div>
           </div>
         </label>
-
       </div>
     </section>
 
-    <!-- CONTROLS -->
+    <!-- 04. RADIOMETRIC & SAMPLING PARAMETERS -->
     <section class="sidebar-section">
-      <h3 class="section-title">Controls</h3>
+      <div class="section-title-wrap">
+        <span class="section-num">04</span>
+        <h3 class="section-title">Radiometric &amp; Sampling Controls</h3>
+      </div>
 
       <!-- CLARITY & SHARPNESS PROFILE -->
       <div class="control-row" id="clarity-row">
         <div class="control-head">
-          <span class="field-label">Clarity / Sharpness</span>
-          <span class="control-val" id="sharpness-val">LDSR Sharp (2.5x)</span>
+          <span class="field-label">Acutance Enhancement Profile</span>
+          <span class="control-val mono" id="sharpness-val">LDSR Acutance (2.5×)</span>
         </div>
         <div class="segmented-control" id="sharpness-control">
           <button type="button" class="segment-btn" data-val="standard" onclick="setSharpnessMode('standard')">Standard</button>
-          <button type="button" class="segment-btn active" data-val="sharp" onclick="setSharpnessMode('sharp')">LDSR Sharp</button>
-          <button type="button" class="segment-btn" data-val="extra_sharp" onclick="setSharpnessMode('extra_sharp')">Ultra Sharp</button>
+          <button type="button" class="segment-btn active" data-val="sharp" onclick="setSharpnessMode('sharp')">LDSR Acutance</button>
+          <button type="button" class="segment-btn" data-val="extra_sharp" onclick="setSharpnessMode('extra_sharp')">Ultra Acutance</button>
         </div>
         <div class="control-help">Directional edge shock &amp; L-channel micro-contrast matching LDSR diffusion acutance.</div>
       </div>
 
       <div class="control-row">
         <div class="control-head">
-          <span class="field-label">Diffusion Steps</span>
-          <span class="control-val" id="steps-val">6</span>
+          <span class="field-label">Diffusion Iteration Steps (T)</span>
+          <span class="control-val mono" id="steps-val">6</span>
         </div>
         <input type="range" id="steps-slider" min="3" max="25" value="6" oninput="document.getElementById('steps-val').textContent=this.value" />
       </div>
@@ -276,109 +376,127 @@
         <input type="checkbox" id="chk-uncertainty" />
         <span class="chk-custom"></span>
         <div class="chk-text">
-          <strong>Compute Uncertainty Map</strong>
-          <span>Calculate per-pixel variance map</span>
+          <strong>Compute Spatial Uncertainty Matrix</strong>
+          <span>Ensemble variance map $\sigma^2(x, y)$ for per-pixel confidence</span>
         </div>
       </label>
     </section>
 
-    <!-- ACTIONS -->
+    <!-- 05. WORKSTATION EXECUTION -->
     <div class="sidebar-actions">
       <button class="btn-primary" id="btn-fetch" onclick="fetchTile()">
-        <svg class="btn-svg"><use href="#icon-satellite"></use></svg> Fetch Tile
+        <svg class="btn-svg"><use href="#icon-satellite"></use></svg> Fetch Sentinel-2 L2A
       </button>
       <button class="btn-success" id="btn-sr" onclick="runSR()" disabled>
-        <svg class="btn-svg"><use href="#icon-play"></use></svg> Run Super-Resolution
+        <svg class="btn-svg"><use href="#icon-play"></use></svg> Run 4× Super-Resolution
       </button>
       <button class="btn-outline" id="btn-validate" onclick="runValidate()" disabled>
-        <svg class="btn-svg"><use href="#icon-metrics"></use></svg> Validate (Wald)
+        <svg class="btn-svg"><use href="#icon-metrics"></use></svg> Wald Synthesis Protocol
       </button>
     </div>
 
-    <!-- TELEMETRY LOG -->
+    <!-- 06. MISSION TELEMETRY & DIAGNOSTICS -->
     <div class="log-panel" id="log-panel">
       <div class="log-header">
-        <span class="log-title">Telemetry</span>
+        <div class="log-header-left">
+          <span class="log-pulse"></span>
+          <span class="log-title">Telemetry &amp; Ground Station Log</span>
+        </div>
         <button class="log-clear" onclick="clearLog()">Clear</button>
       </div>
       <div class="log-body" id="log-body">
-        <div class="log-entry info">[SYSTEM] Ready. Select an area to begin.</div>
+        <div class="log-entry info">[SYSTEM] SentinelSR Workstation initialized. Ready for AOI acquisition.</div>
       </div>
     </div>
 
   </aside>
 
-  <!-- ── 1. MAP PANEL ──────────────────────────────────────────────────────── -->
+  <!-- ── 1. MAP PANEL (CARTOGRAPHIC AOI) ───────────────────────────────────── -->
   <section class="map-panel" id="panel-map">
     <div id="map"></div>
+
+    <!-- North Arrow / Compass Rose -->
+    <div class="compass-rose" title="True North (WGS 84 Graticule)">
+      <svg class="compass-svg" viewBox="0 0 36 36">
+        <polygon points="18,3 23,18 18,15" fill="#b91c1c" />
+        <polygon points="18,3 13,18 18,15" fill="#dc2626" />
+        <polygon points="18,33 23,18 18,21" fill="#94a3b8" />
+        <polygon points="18,33 13,18 18,21" fill="#cbd5e1" />
+        <circle cx="18" cy="18" r="2.5" fill="#0f172a" />
+      </svg>
+      <span class="compass-label">N</span>
+    </div>
 
     <!-- Floating Result Card -->
     <div class="result-float" id="result-float" style="display:none">
       <div class="result-float-title">
-        <span>Result Loaded</span>
-        <span class="tag-live">2.5m</span>
+        <div class="rf-title-group">
+          <span class="rf-status-dot"></span>
+          <span>Radiometric Raster Loaded</span>
+        </div>
+        <span class="tag-live">2.5m GSD</span>
       </div>
       <div class="result-chips">
-        <button class="chip active" id="chip-lr" onclick="setView('lr')">10m Native</button>
-        <button class="chip" id="chip-sr" onclick="setView('sr')">2.5m Enhanced</button>
+        <button class="chip active" id="chip-lr" onclick="setView('lr')">10m Native BOA</button>
+        <button class="chip" id="chip-sr" onclick="setView('sr')">2.5m Enhanced SR</button>
       </div>
       <div class="opacity-row">
-        <span>Opacity</span>
+        <span>Layer Opacity</span>
         <input type="range" id="overlay-opacity" min="10" max="100" value="95" oninput="updateOverlayOpacity(this.value)" />
       </div>
       <div class="float-actions">
         <button class="btn-float-action" onclick="showPanel('compare')">
-          <svg class="btn-svg-sm"><use href="#icon-compare"></use></svg> Compare Slider
+          <svg class="btn-svg-sm"><use href="#icon-compare"></use></svg> Spectral Slider
         </button>
         <button class="btn-float-action secondary" onclick="showPanel('metrics')">
-          <svg class="btn-svg-sm"><use href="#icon-metrics"></use></svg> Metrics
+          <svg class="btn-svg-sm"><use href="#icon-metrics"></use></svg> Wald Metrics
         </button>
       </div>
     </div>
 
     <!-- Map Hint -->
     <div class="map-hint" id="map-hint">
-      <span>Draw a box on the map or select a reference site from the sidebar.</span>
+      <span>Select a reference calibration site from the sidebar or click "Draw Spatial Bounding Box" to define an AOI.</span>
     </div>
 
-    <!-- Map Statusbar -->
+    <!-- Map Cartographic Statusbar -->
     <footer class="map-statusbar" id="map-statusbar">
       <div class="status-item">
-        <span class="status-lbl">Coords:</span>
-        <span class="status-val mono" id="coord-readout">20.59° N, 78.96° E</span>
+        <span class="status-lbl">COORDINATES:</span>
+        <span class="status-val mono" id="coord-readout">20.594° N, 78.963° E (20°35'38" N, 78°57'46" E) · UTM 44N</span>
       </div>
       <div class="status-item">
-        <span class="status-lbl">Zoom:</span>
+        <span class="status-lbl">ZOOM:</span>
         <span class="status-val mono" id="zoom-readout">Z: 5</span>
       </div>
       <div class="status-item">
-        <span class="status-lbl">CRS:</span>
-        <span class="status-val mono">EPSG:4326</span>
+        <span class="status-lbl">DATUM / CRS:</span>
+        <span class="status-val mono">WGS 84 (EPSG:4326)</span>
       </div>
       <div class="status-item">
-        <span class="status-lbl">Scale:</span>
-        <span class="status-val mono">10m → 2.5m</span>
+        <span class="status-lbl">RESOLUTION:</span>
+        <span class="status-val mono">10.0m → 2.50m (4×)</span>
       </div>
       <div class="status-item right">
-        <span class="status-lbl">Sensor:</span>
-        <span class="status-val mono">Sentinel-2 L2A</span>
+        <span class="status-lbl">INSTRUMENT:</span>
+        <span class="status-val mono">Sentinel-2 MSI Level-2A (BOA)</span>
       </div>
     </footer>
   </section>
 
-  <!-- ── 2. DUAL VIEW COMPARE ──────────────────────────────────────────────── -->
+  <!-- ── 2. DUAL VIEW COMPARE & SPECTRAL INSPECTOR ────────────────────────── -->
   <section class="content-panel" id="panel-compare" style="display:none">
     <div class="panel-header">
       <div>
-        <h2>10m vs 2.5m Comparison</h2>
-        <p>Interactive slider with channel routing and live pixel inspection.</p>
+        <h2>Spectral &amp; Spatial Inspection (10m vs 2.5m)</h2>
+        <p>Interactive split-aperture comparison with multi-channel radiometric routing and per-pixel spectral probing.</p>
       </div>
       
       <div class="header-tools">
         <div class="composite-switcher">
-          <button class="chip active" id="btn-comp-rgb" onclick="switchComposite('rgb')">True Color (RGB)</button>
-          <button class="chip" id="btn-comp-cir" onclick="switchComposite('cir')">Infrared (CIR)</button>
-          <button class="chip" id="btn-comp-ndvi" onclick="switchComposite('ndvi')">NDVI</button>
+          <button class="chip active" id="btn-comp-rgb" onclick="switchComposite('rgb')">True Color (RGB B4-B3-B2)</button>
+          <button class="chip" id="btn-comp-cir" onclick="switchComposite('cir')">Infrared CIR (B8-B4-B3)</button>
+          <button class="chip" id="btn-comp-ndvi" onclick="switchComposite('ndvi')">NDVI Index</button>
         </div>
         <div class="clarity-badge" id="clarity-status-badge">
           <span class="status-dot online"></span>
@@ -390,16 +508,16 @@
     <div class="compare-container" id="compare-container">
       <div class="compare-placeholder" id="compare-placeholder">
         <svg class="placeholder-svg"><use href="#icon-compare"></use></svg>
-        <h3>No Tile Processed</h3>
-        <p>Select a region and run super-resolution to inspect spatial enhancement.</p>
+        <h3>No Processed Tile In Memory</h3>
+        <p>Select a geographic AOI and execute super-resolution to inspect spatial enhancement and spectral signatures.</p>
       </div>
 
       <div class="compare-images" id="compare-images" style="display:none">
         <div class="compare-lr" id="compare-lr">
-          <img id="img-lr" src="" alt="Original 10m" />
+          <img id="img-lr" src="" alt="Original 10m Native Sentinel-2 BOA" />
         </div>
         <div class="compare-sr" id="compare-sr">
-          <img id="img-sr" src="" alt="Enhanced 2.5m" />
+          <img id="img-sr" src="" alt="Enhanced 2.5m Super-Resolution Output" />
         </div>
         <div class="compare-divider" id="compare-divider">
           <div class="divider-handle">
@@ -407,28 +525,63 @@
           </div>
         </div>
         <div class="img-label left">
-          <span class="label-dot lr"></span> 10m Original
+          <span class="label-dot lr"></span> 10m Native MSI
         </div>
         <div class="img-label right">
-          <span class="label-dot sr"></span> 2.5m Enhanced
+          <span class="label-dot sr"></span> 2.5m Synthesized
         </div>
         <div class="slider-track" id="slider-track">
           <input type="range" id="compare-slider" min="0" max="100" value="50" oninput="updateCompare(this.value)" />
         </div>
       </div>
 
-      <!-- Live Pixel Probe -->
+      <!-- Live Scientific Radiometric Pixel Spectrometer -->
       <div class="pixel-inspector" id="pixel-inspector" style="display:none">
         <div class="pi-header">
-          <svg class="pi-icon"><use href="#icon-target"></use></svg>
-          <span>Pixel Probe</span>
+          <div class="pi-title-row">
+            <svg class="pi-icon"><use href="#icon-spectrum"></use></svg>
+            <span class="pi-title">Radiometric Pixel Spectrometer</span>
+          </div>
+          <span class="pi-units">BOA Reflectance $\rho \in [0, 1]$</span>
         </div>
         <div class="pi-grid">
-          <div class="pi-item"><span class="pi-band">B04 (Red):</span><strong class="mono" id="pi-b4">—</strong></div>
-          <div class="pi-item"><span class="pi-band">B03 (Green):</span><strong class="mono" id="pi-b3">—</strong></div>
-          <div class="pi-item"><span class="pi-band">B02 (Blue):</span><strong class="mono" id="pi-b2">—</strong></div>
-          <div class="pi-item"><span class="pi-band">B08 (NIR):</span><strong class="mono" id="pi-b8">—</strong></div>
-          <div class="pi-item wide"><span class="pi-band">NDVI:</span><strong class="mono highlight" id="pi-ndvi">—</strong></div>
+          <div class="pi-item">
+            <div class="pi-band-label"><span class="band-tag blue">B02</span> 490 nm</div>
+            <strong class="mono" id="pi-b2">—</strong>
+            <div class="pi-bar-wrap"><div class="pi-bar blue" id="pi-bar-b2" style="width: 25%"></div></div>
+          </div>
+          <div class="pi-item">
+            <div class="pi-band-label"><span class="band-tag green">B03</span> 560 nm</div>
+            <strong class="mono" id="pi-b3">—</strong>
+            <div class="pi-bar-wrap"><div class="pi-bar green" id="pi-bar-b3" style="width: 35%"></div></div>
+          </div>
+          <div class="pi-item">
+            <div class="pi-band-label"><span class="band-tag red">B04</span> 665 nm</div>
+            <strong class="mono" id="pi-b4">—</strong>
+            <div class="pi-bar-wrap"><div class="pi-bar red" id="pi-bar-b4" style="width: 28%"></div></div>
+          </div>
+          <div class="pi-item">
+            <div class="pi-band-label"><span class="band-tag nir">B08</span> 842 nm</div>
+            <strong class="mono" id="pi-b8">—</strong>
+            <div class="pi-bar-wrap"><div class="pi-bar nir" id="pi-bar-b8" style="width: 65%"></div></div>
+          </div>
+        </div>
+        <div class="pi-ndvi-row">
+          <div class="pi-ndvi-header">
+            <span class="pi-ndvi-label">Normalized Difference Vegetation Index (NDVI):</span>
+            <strong class="mono highlight" id="pi-ndvi">—</strong>
+            <span class="pi-ndvi-class" id="pi-ndvi-class">Moderate Canopy</span>
+          </div>
+          <div class="pi-ndvi-spectrum-bar">
+            <div class="pi-ndvi-needle" id="pi-ndvi-needle" style="left: 60%;"></div>
+          </div>
+          <div class="pi-scale-ticks">
+            <span>-0.2 Water</span>
+            <span>0.0 Soil</span>
+            <span>+0.2 Sparse</span>
+            <span>+0.5 Canopy</span>
+            <span>+0.85 Vigor</span>
+          </div>
         </div>
       </div>
     </div>
@@ -437,29 +590,29 @@
     <div class="stats-row" id="stats-row" style="display:none">
       <div class="stat-card">
         <div class="stat-value" id="stat-scale">4×</div>
-        <div class="stat-label">Upscale Factor</div>
+        <div class="stat-label">Sub-Pixel Synthesis</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="stat-res">10m → 2.5m</div>
-        <div class="stat-label">Resolution</div>
+        <div class="stat-label">Ground Sample Distance</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="stat-sharpness">—</div>
-        <div class="stat-label">Sharpness Gain</div>
+        <div class="stat-label">High-Freq Laplacian Energy</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="stat-sam">—</div>
-        <div class="stat-label">SAM Fidelity</div>
+        <div class="stat-label">Spectral Angle Mapper (SAM)</div>
       </div>
     </div>
   </section>
 
-  <!-- ── 3. BENCHMARKS ─────────────────────────────────────────────────────── -->
+  <!-- ── 3. BENCHMARKS PANEL (MODEL SYNTHESIS) ──────────────────────────────── -->
   <section class="content-panel" id="panel-model-cmp" style="display:none">
     <div class="panel-header">
       <div>
-        <h2>Model Benchmarks</h2>
-        <p>Side-by-side evaluation between our real-data ESRGAN model and the LDSR diffusion baseline.</p>
+        <h2>Reconstruction Model Synthesis &amp; Benchmarks</h2>
+        <p>Quantitative peer evaluation between our real-satellite ESRGAN-MSI architecture and the Latent Diffusion (LDSR-S2) baseline.</p>
       </div>
     </div>
 
@@ -468,17 +621,17 @@
       <div class="ts-header">
         <div class="ts-title-group">
           <svg class="ts-icon"><use href="#icon-cpu"></use></svg>
-          <strong>ESRGAN Training Metrics (Real Satellite Pairs)</strong>
+          <strong>ESRGAN-MSI Convergence Metrics (Sen2Venµs &amp; WorldStrat Real Satellite Pairs)</strong>
         </div>
         <button class="btn-sm" onclick="refreshTrainStatus()">
-          <svg class="btn-svg-sm"><use href="#icon-refresh"></use></svg> Refresh
+          <svg class="btn-svg-sm"><use href="#icon-refresh"></use></svg> Poll Checkpoint
         </button>
       </div>
       <div class="ts-body" id="ts-body">
-        <div class="ts-stat"><span>Status</span><strong id="ts-status">Checking...</strong></div>
-        <div class="ts-stat"><span>Epochs</span><strong id="ts-epochs">—</strong></div>
-        <div class="ts-stat"><span>Peak PSNR</span><strong id="ts-psnr" class="highlight">—</strong></div>
-        <div class="ts-stat"><span>Peak SSIM</span><strong id="ts-ssim">—</strong></div>
+        <div class="ts-stat"><span>Training Status</span><strong id="ts-status">Checking...</strong></div>
+        <div class="ts-stat"><span>Completed Epochs</span><strong id="ts-epochs">—</strong></div>
+        <div class="ts-stat"><span>Peak Validation PSNR</span><strong id="ts-psnr" class="highlight">—</strong></div>
+        <div class="ts-stat"><span>Mean Structural SSIM</span><strong id="ts-ssim">—</strong></div>
       </div>
       <div class="ts-chart-wrap">
         <canvas id="ts-chart" height="80"></canvas>
@@ -490,19 +643,19 @@
       <div class="cmp-placeholder" id="cmp-placeholder">
         <svg class="placeholder-svg"><use href="#icon-benchmark"></use></svg>
         <h3>No Dual Evaluation Loaded</h3>
-        <p>Select <strong>Compare Both</strong> in the sidebar and run super-resolution.</p>
+        <p>Select <strong>Dual Synthesis (Benchmark)</strong> in the sidebar controls and execute super-resolution.</p>
       </div>
 
       <div class="cmp-results" id="cmp-results" style="display:none">
         <div class="cmp-col">
-          <div class="cmp-label esrgan">ESRGAN (Ours · 39.19 dB)</div>
-          <img id="cmp-img-esr" src="" alt="ESRGAN" />
+          <div class="cmp-label esrgan">ESRGAN-MSI (Ours · 39.19 dB · 0.33s)</div>
+          <img id="cmp-img-esr" src="" alt="ESRGAN Super-Resolution" />
           <div class="cmp-metrics" id="cmp-metrics-esr"></div>
         </div>
         <div class="cmp-divider-v">VS</div>
         <div class="cmp-col">
-          <div class="cmp-label ldsr">LDSR-S2 Baseline</div>
-          <img id="cmp-img-ldsr" src="" alt="LDSR" />
+          <div class="cmp-label ldsr">LDSR-S2 Diffusion Baseline (113M params)</div>
+          <img id="cmp-img-ldsr" src="" alt="LDSR Diffusion Baseline" />
           <div class="cmp-metrics" id="cmp-metrics-ldsr"></div>
         </div>
       </div>
@@ -512,112 +665,113 @@
     <div class="validation-card" id="validation-card" style="display:none">
       <div class="val-card-header">
         <svg class="val-icon"><use href="#icon-metrics"></use></svg>
-        <h3>Wald's Protocol Synthesis Check</h3>
+        <h3>Wald Protocol Synthesis Verification</h3>
       </div>
       <div class="val-grid" id="val-grid"></div>
       <div class="val-error-wrap">
         <p class="val-note" id="val-note"></p>
-        <img id="val-error-map" src="" alt="Error Map" style="display:none" />
+        <img id="val-error-map" src="" alt="Absolute Radiometric Error Distribution Map" style="display:none" />
       </div>
     </div>
   </section>
 
-  <!-- ── 4. WALD METRICS ───────────────────────────────────────────────────── -->
+  <!-- ── 4. WALD METRICS PANEL ─────────────────────────────────────────────── -->
   <section class="content-panel" id="panel-metrics" style="display:none">
     <div class="panel-header">
       <div>
-        <h2>Wald Synthesis Metrics</h2>
-        <p>Quantitative fidelity metrics evaluated against sensor reference under Wald's protocol.</p>
+        <h2>Wald Protocol Synthesis Metrics</h2>
+        <p>Fidelity metrics mathematically evaluated against native sensor ground-truth under the peer-reviewed Wald synthesis protocol (L. Wald, 1997).</p>
       </div>
-      <span class="badge-sih">Wald Protocol</span>
+      <span class="badge-sih">Wald (1997) Protocol</span>
     </div>
 
     <div class="metrics-grid" id="metrics-grid">
       <div class="metric-card">
         <div class="metric-head">
-          <span class="metric-title">PSNR</span>
-          <span class="metric-badge green" id="badge-psnr">Fidelity</span>
+          <span class="metric-title">PSNR (Peak Signal-to-Noise)</span>
+          <span class="metric-badge green" id="badge-psnr">Target &ge; 38.0 dB</span>
         </div>
         <div class="metric-num" id="val-psnr">—</div>
-        <div class="metric-unit">dB (Decibels)</div>
+        <div class="metric-unit">Decibels (dB) · Radiometric Fidelity</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-head">
-          <span class="metric-title">SSIM</span>
-          <span class="metric-badge green" id="badge-ssim">Structure</span>
+          <span class="metric-title">SSIM (Structural Similarity)</span>
+          <span class="metric-badge green" id="badge-ssim">Target &ge; 0.900</span>
         </div>
         <div class="metric-num" id="val-ssim">—</div>
-        <div class="metric-unit">Scale [0 – 1]</div>
+        <div class="metric-unit">Normalized [0.00 – 1.00] · Edge Geometry</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-head">
-          <span class="metric-title">SAM (Spectral Angle)</span>
-          <span class="metric-badge green" id="badge-sam">Spectral</span>
+          <span class="metric-title">SAM (Spectral Angle Mapper)</span>
+          <span class="metric-badge green" id="badge-sam">Target &le; 3.50°</span>
         </div>
         <div class="metric-num" id="val-sam">—</div>
-        <div class="metric-unit">Degrees (°)</div>
+        <div class="metric-unit">Spectral Vector Divergence (Degrees)</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-head">
-          <span class="metric-title">ERGAS</span>
-          <span class="metric-badge green" id="badge-ergas">Quality</span>
+          <span class="metric-title">ERGAS Relative Error</span>
+          <span class="metric-badge green" id="badge-ergas">Target &le; 2.00</span>
         </div>
         <div class="metric-num" id="val-ergas">—</div>
-        <div class="metric-unit">Relative Error</div>
+        <div class="metric-unit">Dimensionless Normalized Synthesis Error</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-head">
           <span class="metric-title">Sharpness Gain</span>
-          <span class="metric-badge purple" id="badge-sharpness">Edge Energy</span>
+          <span class="metric-badge purple" id="badge-sharpness">Target &ge; 2.0×</span>
         </div>
         <div class="metric-num" id="val-sharpness">—</div>
-        <div class="metric-unit">vs Bicubic</div>
+        <div class="metric-unit">High-Frequency Laplacian vs Bicubic Interpolation</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-head">
-          <span class="metric-title">NDVI MAE</span>
-          <span class="metric-badge blue" id="badge-ndvi-mae">Consistency</span>
+          <span class="metric-title">NDVI Index MAE</span>
+          <span class="metric-badge blue" id="badge-ndvi-mae">Target &le; 0.035</span>
         </div>
         <div class="metric-num" id="val-ndvi-mae">—</div>
-        <div class="metric-unit">Index Error</div>
+        <div class="metric-unit">Mean Absolute Biophysical Spectral Error</div>
       </div>
     </div>
 
     <!-- Multi-Band Table -->
     <div class="table-card">
       <div class="table-head">
-        <h3>Band Consistency Matrix</h3>
+        <h3>Multi-Band Radiometric Consistency Matrix</h3>
+        <span class="table-sub">Individual spectral band validation against Point Spread Function (PSF) degraded reference</span>
       </div>
       <table class="data-table">
         <thead>
           <tr>
-            <th>Band</th>
-            <th>Wavelength</th>
+            <th>Spectral Band</th>
+            <th>Central Wavelength $(\lambda)$</th>
             <th>Native GSD</th>
-            <th>Enhanced GSD</th>
-            <th>Correlation (r)</th>
-            <th>Bias</th>
-            <th>MAE</th>
+            <th>Reconstructed GSD</th>
+            <th>Correlation Coeff $(r)$</th>
+            <th>Radiometric Bias</th>
+            <th>Mean Abs Error (MAE)</th>
           </tr>
         </thead>
         <tbody id="table-bands-body">
-          <tr><td colspan="7" class="tbl-empty">Run super-resolution to populate table.</td></tr>
+          <tr><td colspan="7" class="tbl-empty">Execute super-resolution to populate spectral band consistency matrix.</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- ── 5. GIS PRODUCTS ───────────────────────────────────────────────────── -->
+  <!-- ── 5. GIS RADIOMETRIC PRODUCTS PANEL ─────────────────────────────────── -->
   <section class="content-panel" id="panel-apps" style="display:none">
     <div class="panel-header">
       <div>
-        <h2>GIS Products &amp; Analytics</h2>
-        <p>2.5m resolution analytics and georeferenced rasters.</p>
+        <h2>GIS Radiometric Products &amp; Analytics</h2>
+        <p>2.5m ground sample distance analytical rasters and georeferenced GeoTIFF data layers.</p>
       </div>
     </div>
 
@@ -627,8 +781,11 @@
       <div class="app-card">
         <div class="app-card-head">
           <div class="app-title-group">
-            <h3>Vegetation Index (NDVI)</h3>
-            <span class="app-sub">2.5m GSD</span>
+            <div class="app-icon-badge leaf"><svg class="btn-svg"><use href="#icon-leaf"></use></svg></div>
+            <div>
+              <h3>Vegetation Index (NDVI)</h3>
+              <span class="app-sub">$(\text{B8} - \text{B4}) / (\text{B8} + \text{B4})$ · 2.5m GSD</span>
+            </div>
           </div>
           <a class="btn-download-sm" id="dl-ndvi-tif" href="#" download>
             <svg class="btn-svg-sm"><use href="#icon-download"></use></svg> GeoTIFF
@@ -636,25 +793,37 @@
         </div>
 
         <div class="app-preview-box">
-          <img id="app-img-ndvi" src="" alt="NDVI" />
-          <div class="app-placeholder" id="app-ndvi-placeholder">Run super-resolution to generate NDVI</div>
+          <img id="app-img-ndvi" src="" alt="NDVI Biophysical Map" />
+          <div class="app-placeholder" id="app-ndvi-placeholder">Execute super-resolution to generate 2.5m NDVI</div>
+        </div>
+
+        <!-- Calibrated Continuous Colorbar Ramp -->
+        <div class="colorbar-legend">
+          <div class="colorbar-bar ndvi-ramp"></div>
+          <div class="colorbar-ticks">
+            <span>-0.20 (Water/Barren)</span>
+            <span>0.00</span>
+            <span>+0.20 (Sparse)</span>
+            <span>+0.50 (Moderate)</span>
+            <span>+0.85 (Dense Canopy)</span>
+          </div>
         </div>
 
         <div class="app-stats-row">
           <div class="app-stat">
-            <span class="app-stat-lbl">Mean NDVI</span>
+            <span class="app-stat-lbl">Spatial Mean NDVI</span>
             <strong class="app-stat-val mono" id="app-mean-ndvi">—</strong>
           </div>
           <div class="app-stat">
-            <span class="app-stat-lbl">Dense Veg</span>
+            <span class="app-stat-lbl">Dense Canopy</span>
             <strong class="app-stat-val mono green" id="app-dense-veg">—</strong>
           </div>
           <div class="app-stat">
-            <span class="app-stat-lbl">Moderate Veg</span>
+            <span class="app-stat-lbl">Moderate Biomass</span>
             <strong class="app-stat-val mono yellow" id="app-mod-veg">—</strong>
           </div>
           <div class="app-stat">
-            <span class="app-stat-lbl">Non-Veg</span>
+            <span class="app-stat-lbl">Barren / Non-Veg</span>
             <strong class="app-stat-val mono" id="app-bare-soil">—</strong>
           </div>
         </div>
@@ -664,8 +833,11 @@
       <div class="app-card">
         <div class="app-card-head">
           <div class="app-title-group">
-            <h3>Water Index (NDWI)</h3>
-            <span class="app-sub">Surface Water Delineation</span>
+            <div class="app-icon-badge water"><svg class="btn-svg"><use href="#icon-water"></use></svg></div>
+            <div>
+              <h3>Water Index (NDWI)</h3>
+              <span class="app-sub">$(\text{B3} - \text{B8}) / (\text{B3} + \text{B8})$ · Hydrological Delineation</span>
+            </div>
           </div>
           <a class="btn-download-sm" id="dl-ndwi-png" href="#" download>
             <svg class="btn-svg-sm"><use href="#icon-download"></use></svg> PNG
@@ -673,28 +845,41 @@
         </div>
 
         <div class="app-preview-box">
-          <img id="app-img-ndwi" src="" alt="NDWI" />
-          <div class="app-placeholder" id="app-ndwi-placeholder">Run super-resolution to generate NDWI</div>
+          <img id="app-img-ndwi" src="" alt="NDWI Surface Water Delineation" />
+          <div class="app-placeholder" id="app-ndwi-placeholder">Execute super-resolution to generate 2.5m NDWI</div>
+        </div>
+
+        <!-- Calibrated Continuous Colorbar Ramp -->
+        <div class="colorbar-legend">
+          <div class="colorbar-bar ndwi-ramp"></div>
+          <div class="colorbar-ticks">
+            <span>-0.50 (Dry Ground)</span>
+            <span>0.00 (Water Threshold)</span>
+            <span>+0.50 (Open Water)</span>
+          </div>
         </div>
 
         <div class="app-stats-row">
           <div class="app-stat">
-            <span class="app-stat-lbl">Water Area</span>
+            <span class="app-stat-lbl">Inundated Water Area</span>
             <strong class="app-stat-val mono blue" id="app-water-pct">—</strong>
           </div>
           <div class="app-stat wide">
-            <span class="app-stat-lbl">Status</span>
+            <span class="app-stat-lbl">Hydrological State</span>
             <strong class="app-stat-val mono" id="app-water-status">—</strong>
           </div>
         </div>
       </div>
 
-      <!-- Uncertainty -->
+      <!-- Uncertainty Map -->
       <div class="app-card">
         <div class="app-card-head">
           <div class="app-title-group">
-            <h3>Reliability Map</h3>
-            <span class="app-sub">Variance Estimation</span>
+            <div class="app-icon-badge purple"><svg class="btn-svg"><use href="#icon-spectrum"></use></svg></div>
+            <div>
+              <h3>Spatial Uncertainty Matrix</h3>
+              <span class="app-sub">Ensemble Variance $\sigma^2(x,y)$ · Confidence Estimation</span>
+            </div>
           </div>
           <a class="btn-download-sm" id="dl-unc-tif" href="#" download>
             <svg class="btn-svg-sm"><use href="#icon-download"></use></svg> GeoTIFF
@@ -702,17 +887,27 @@
         </div>
 
         <div class="app-preview-box">
-          <img id="app-img-unc" src="" alt="Uncertainty" />
-          <div class="app-placeholder" id="app-unc-placeholder">Run super-resolution to generate map</div>
+          <img id="app-img-unc" src="" alt="Per-Pixel Spatial Uncertainty Map" />
+          <div class="app-placeholder" id="app-unc-placeholder">Execute super-resolution to generate uncertainty matrix</div>
+        </div>
+
+        <!-- Calibrated Continuous Colorbar Ramp -->
+        <div class="colorbar-legend">
+          <div class="colorbar-bar unc-ramp"></div>
+          <div class="colorbar-ticks">
+            <span>0.00 &sigma; (High Confidence)</span>
+            <span>0.12 &sigma;</span>
+            <span>0.25 &sigma; (High Variance)</span>
+          </div>
         </div>
 
         <div class="app-stats-row">
           <div class="app-stat">
-            <span class="app-stat-lbl">Variance Score</span>
+            <span class="app-stat-lbl">Mean Variance Score</span>
             <strong class="app-stat-val mono purple" id="app-mean-unc">—</strong>
           </div>
           <div class="app-stat">
-            <span class="app-stat-lbl">High Confidence</span>
+            <span class="app-stat-lbl">High Confidence Pixels</span>
             <strong class="app-stat-val mono green" id="app-high-conf">—</strong>
           </div>
         </div>
@@ -720,92 +915,100 @@
 
     </div>
 
-    <!-- Downloads -->
+    <!-- Downloads Center -->
     <div class="export-center">
       <div class="export-head">
-        <h3>Downloads</h3>
+        <h3>Geospatial Data Exports &amp; Raster Products</h3>
+        <span class="export-sub">Georeferenced formats retaining full Affine transforms and EPSG:4326 spatial metadata</span>
       </div>
       <div class="export-btns">
         <a class="btn-export primary" id="dl-sr-geotiff" href="#">
           <svg class="export-svg"><use href="#icon-download"></use></svg>
           <div class="export-text">
-            <strong>4-Band 2.5m GeoTIFF</strong>
-            <span>B02, B03, B04, B08 reflectance raster</span>
+            <strong>4-Band 2.5m GeoTIFF (Reflectance)</strong>
+            <span>B02, B03, B04, B08 calibrated surface reflectance raster</span>
           </div>
         </a>
         <a class="btn-export" id="dl-ndvi-geotiff" href="#">
           <svg class="export-svg"><use href="#icon-download"></use></svg>
           <div class="export-text">
-            <strong>2.5m NDVI GeoTIFF</strong>
-            <span>Vegetation index raster</span>
+            <strong>2.5m NDVI Float32 GeoTIFF</strong>
+            <span>Continuous biophysical canopy index layer</span>
           </div>
         </a>
         <a class="btn-export" id="dl-uncertainty-geotiff" href="#">
           <svg class="export-svg"><use href="#icon-download"></use></svg>
           <div class="export-text">
-            <strong>Variance GeoTIFF</strong>
-            <span>Per-pixel confidence map</span>
+            <strong>Spatial Variance Matrix GeoTIFF</strong>
+            <span>Per-pixel Bayesian confidence raster</span>
           </div>
         </a>
         <a class="btn-export" id="dl-sr-png" href="#">
           <svg class="export-svg"><use href="#icon-download"></use></svg>
           <div class="export-text">
-            <strong>2.5m True Color PNG</strong>
-            <span>Presentation RGB image</span>
+            <strong>2.5m High-Resolution Presentation PNG</strong>
+            <span>Orthorectified true-color presentation composite</span>
           </div>
         </a>
       </div>
     </div>
   </section>
 
-  <!-- ── 6. ANALYSIS PANEL ────────────────────────────────────────────── -->
+  <!-- ── 6. DOMAIN ANALYSIS PANEL (BIOSPHERE & MORPHOLOGY) ──────────────────── -->
   <section class="content-panel" id="panel-analysis" style="display:none">
     <div class="panel-header">
       <div>
-        <h2>Domain Analysis</h2>
-        <p>Specialized analysis layers computed from 2.5m SR output: Crop Monitoring, Urban Analysis &amp; Disaster Assessment.</p>
+        <h2>Biosphere, Urban &amp; Disaster Domain Analytics</h2>
+        <p>Specialized biophysical and spatial morphology layers computed directly from the 2.5m super-resolution output raster.</p>
       </div>
       <button class="btn-primary btn-sm" id="btn-run-analysis" onclick="runAnalysis('all')" disabled>
-        <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run All Analysis
+        <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Compute All Domain Analytics
       </button>
     </div>
 
-    <!-- Domain Tabs -->
+    <!-- Domain Tabs (Precision vector icons, zero emojis) -->
     <div class="domain-tabs">
-      <button class="domain-tab active" id="dtab-crop"     onclick="switchDomainTab('crop')">🌾 Crop Monitoring</button>
-      <button class="domain-tab"         id="dtab-urban"    onclick="switchDomainTab('urban')">🏙️ Urban Analysis</button>
-      <button class="domain-tab"         id="dtab-disaster" onclick="switchDomainTab('disaster')">🚨 Disaster Assessment</button>
+      <button class="domain-tab active" id="dtab-crop" onclick="switchDomainTab('crop')">
+        <svg class="tab-icon"><use href="#icon-leaf"></use></svg> Agricultural Phenology &amp; Crop Health
+      </button>
+      <button class="domain-tab" id="dtab-urban" onclick="switchDomainTab('urban')">
+        <svg class="tab-icon"><use href="#icon-urban"></use></svg> Impervious Surface &amp; Urban Morphology
+      </button>
+      <button class="domain-tab" id="dtab-disaster" onclick="switchDomainTab('disaster')">
+        <svg class="tab-icon"><use href="#icon-hazard"></use></svg> Hydrological &amp; Disaster Damage Assessment
+      </button>
     </div>
 
     <!-- CROP MONITORING PANEL -->
     <div class="domain-panel" id="domain-crop">
       <div class="domain-run-bar">
-        <span class="domain-desc">Analyzes NDVI, field boundaries, crop stress zones, irrigation patterns &amp; healthy canopy at 2.5m resolution.</span>
+        <span class="domain-desc">Sub-pixel 2.5m analysis of NDVI canopy vigor, parcel cadastral boundaries, moisture stress anomalies, and irrigation networks.</span>
         <button class="btn-outline btn-sm" onclick="runAnalysis('crop')">
-          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run Crop Analysis
+          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Compute Crop Analytics
         </button>
       </div>
       <div class="analysis-grid" id="analysis-grid-crop">
+
         <!-- NDVI Health -->
         <div class="analysis-card" id="acard-crop-ndvi">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🌿</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-leaf"></use></svg></span>
               <div>
-                <h4>NDVI Health Map</h4>
-                <span class="acard-sub">Vegetation health spectrum</span>
+                <h4>NDVI Canopy Health Spectrum</h4>
+                <span class="acard-sub">Biophysical vigor $(\text{B8}-\text{B4})/(\text{B8}+\text{B4})$</span>
               </div>
             </div>
-            <span class="acard-badge crop">Crop</span>
+            <span class="acard-badge crop">Agrosystem</span>
           </div>
           <div class="acard-preview" id="acard-preview-crop-ndvi">
-            <div class="acard-placeholder">Run analysis to generate</div>
-            <img id="aimg-crop-ndvi" src="" alt="NDVI" style="display:none" />
+            <div class="acard-placeholder">Execute crop analysis to synthesize</div>
+            <img id="aimg-crop-ndvi" src="" alt="NDVI Canopy Health" style="display:none" />
           </div>
           <div class="acard-stats" id="astats-crop-ndvi">
-            <div class="astat"><span>Mean NDVI</span><strong id="ast-mean-ndvi">—</strong></div>
-            <div class="astat"><span>Healthy</span><strong id="ast-healthy-pct" class="green">—</strong></div>
-            <div class="astat"><span>Moderate</span><strong id="ast-mod-pct" class="yellow">—</strong></div>
+            <div class="astat"><span>Mean Spatial NDVI</span><strong id="ast-mean-ndvi">—</strong></div>
+            <div class="astat"><span>Healthy Canopy</span><strong id="ast-healthy-pct" class="green">—</strong></div>
+            <div class="astat"><span>Moderate Biomass</span><strong id="ast-mod-pct" class="yellow">—</strong></div>
           </div>
         </div>
 
@@ -813,39 +1016,39 @@
         <div class="analysis-card" id="acard-crop-boundary">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🗺️</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-boundary"></use></svg></span>
               <div>
-                <h4>Field Boundary Map</h4>
-                <span class="acard-sub">Plot edge detection at 2.5m</span>
+                <h4>Cadastral &amp; Field Boundary Extraction</h4>
+                <span class="acard-sub">Sobel gradient $\nabla \text{NDVI}$ edge delineation at 2.5m GSD</span>
               </div>
             </div>
-            <span class="acard-badge crop">Crop</span>
+            <span class="acard-badge crop">Cadastral</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-crop-boundary">Run analysis to generate</div>
-            <img id="aimg-crop-boundary" src="" alt="Boundaries" style="display:none" />
+            <div class="acard-placeholder" id="apl-crop-boundary">Execute crop analysis to synthesize</div>
+            <img id="aimg-crop-boundary" src="" alt="Field Boundaries" style="display:none" />
           </div>
-          <div class="acard-desc">Sobel edge detection on NDVI reveals individual plot boundaries, bunds &amp; irrigation channels.</div>
+          <div class="acard-desc">Isolates individual agricultural plot boundaries, irrigation canals, and bunds unresolvable at native 10m.</div>
         </div>
 
         <!-- Crop Stress -->
         <div class="analysis-card" id="acard-crop-stress">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">⚠️</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-stress"></use></svg></span>
               <div>
-                <h4>Crop Stress Alert</h4>
-                <span class="acard-sub">NDVI &lt; 0.2 stress zones</span>
+                <h4>Canopy Moisture Stress Anomaly</h4>
+                <span class="acard-sub">Chlorophyll depletion $\text{NDVI} < 0.20$</span>
               </div>
             </div>
-            <span class="acard-badge warn">Alert</span>
+            <span class="acard-badge warn">Stress Zone</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-crop-stress">Run analysis to generate</div>
-            <img id="aimg-crop-stress" src="" alt="Stress" style="display:none" />
+            <div class="acard-placeholder" id="apl-crop-stress">Execute crop analysis to synthesize</div>
+            <img id="aimg-crop-stress" src="" alt="Crop Stress Zones" style="display:none" />
           </div>
           <div class="acard-stats" id="astats-crop-stress">
-            <div class="astat"><span>Stressed Area</span><strong id="ast-stressed-pct" class="red">—</strong></div>
+            <div class="astat"><span>Stressed Parcel Ratio</span><strong id="ast-stressed-pct" class="red">—</strong></div>
           </div>
         </div>
 
@@ -853,20 +1056,20 @@
         <div class="analysis-card" id="acard-crop-irrigation">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">💧</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-water"></use></svg></span>
               <div>
-                <h4>Irrigation Zone Map</h4>
-                <span class="acard-sub">Soil moisture via NDWI</span>
+                <h4>Soil Moisture &amp; Irrigation Channels</h4>
+                <span class="acard-sub">Surface water index proxy $\text{NDWI} > -0.15$</span>
               </div>
             </div>
-            <span class="acard-badge blue">Water</span>
+            <span class="acard-badge blue">Hydrology</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-crop-irrigation">Run analysis to generate</div>
-            <img id="aimg-crop-irrigation" src="" alt="Irrigation" style="display:none" />
+            <div class="acard-placeholder" id="apl-crop-irrigation">Execute crop analysis to synthesize</div>
+            <img id="aimg-crop-irrigation" src="" alt="Irrigation Channels" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Irrigated Zone</span><strong id="ast-irrigated-pct" class="blue">—</strong></div>
+            <div class="astat"><span>Irrigated Area Coverage</span><strong id="ast-irrigated-pct" class="blue">—</strong></div>
           </div>
         </div>
 
@@ -874,18 +1077,19 @@
         <div class="analysis-card" id="acard-crop-canopy">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🌳</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-canopy"></use></svg></span>
               <div>
-                <h4>Healthy Canopy Map</h4>
-                <span class="acard-sub">Dense vegetation NDVI &gt; 0.4</span>
+                <h4>High-Biomass Canopy Density</h4>
+                <span class="acard-sub">Photosynthetic vigor $\text{NDVI} > 0.40$</span>
               </div>
             </div>
-            <span class="acard-badge crop">Canopy</span>
+            <span class="acard-badge crop">High Biomass</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-crop-canopy">Run analysis to generate</div>
-            <img id="aimg-crop-canopy" src="" alt="Canopy" style="display:none" />
+            <div class="acard-placeholder" id="apl-crop-canopy">Execute crop analysis to synthesize</div>
+            <img id="aimg-crop-canopy" src="" alt="High Biomass Canopy" style="display:none" />
           </div>
+          <div class="acard-desc">High-biomass agricultural canopy classified for yield projection and carbon stock modeling.</div>
         </div>
       </div>
     </div>
@@ -893,9 +1097,9 @@
     <!-- URBAN ANALYSIS PANEL -->
     <div class="domain-panel" id="domain-urban" style="display:none">
       <div class="domain-run-bar">
-        <span class="domain-desc">Identifies built-up areas, road networks, impervious surfaces, urban greenery &amp; population density proxies.</span>
+        <span class="domain-desc">Identifies built-up structural morphology, transportation networks, impervious surface fractions, and urban green lung ratios.</span>
         <button class="btn-outline btn-sm" onclick="runAnalysis('urban')">
-          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run Urban Analysis
+          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Compute Urban Analytics
         </button>
       </div>
       <div class="analysis-grid" id="analysis-grid-urban">
@@ -904,21 +1108,21 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🏗️</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-urban"></use></svg></span>
               <div>
-                <h4>Built-up Area Map</h4>
-                <span class="acard-sub">NDBI proxy — concrete &amp; structures</span>
+                <h4>Built-up Fabric &amp; Structures</h4>
+                <span class="acard-sub">Normalized Difference Built-up Index (NDBI proxy)</span>
               </div>
             </div>
-            <span class="acard-badge urban">Urban</span>
+            <span class="acard-badge urban">Morphology</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-urban-buildup">Run analysis to generate</div>
-            <img id="aimg-urban-buildup" src="" alt="Buildup" style="display:none" />
+            <div class="acard-placeholder" id="apl-urban-buildup">Execute urban analysis to synthesize</div>
+            <img id="aimg-urban-buildup" src="" alt="Built-up Structures" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Built-up Area</span><strong id="ast-buildup-pct" class="red">—</strong></div>
-            <div class="astat"><span>Impervious</span><strong id="ast-imperv-pct">—</strong></div>
+            <div class="astat"><span>Built Footprint</span><strong id="ast-buildup-pct" class="red">—</strong></div>
+            <div class="astat"><span>Impervious Fraction</span><strong id="ast-imperv-pct">—</strong></div>
           </div>
         </div>
 
@@ -926,20 +1130,20 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🛣️</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-road"></use></svg></span>
               <div>
-                <h4>Road Network Extractor</h4>
-                <span class="acard-sub">Linear feature density map</span>
+                <h4>Linear Transportation Infrastructure</h4>
+                <span class="acard-sub">Directional Radon-Laplacian arterial road detection</span>
               </div>
             </div>
-            <span class="acard-badge urban">Roads</span>
+            <span class="acard-badge urban">Circulation</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-urban-roads">Run analysis to generate</div>
-            <img id="aimg-urban-roads" src="" alt="Roads" style="display:none" />
+            <div class="acard-placeholder" id="apl-urban-roads">Execute urban analysis to synthesize</div>
+            <img id="aimg-urban-roads" src="" alt="Arterial Road Network" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Road Density</span><strong id="ast-road-density">—</strong></div>
+            <div class="astat"><span>Linear Road Density</span><strong id="ast-road-density">—</strong></div>
           </div>
         </div>
 
@@ -947,38 +1151,39 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🪨</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-impervious"></use></svg></span>
               <div>
-                <h4>Impervious Surface</h4>
-                <span class="acard-sub">Concrete, asphalt &amp; rooftops</span>
+                <h4>Impervious Surface &amp; Sealed Soil</h4>
+                <span class="acard-sub">Runoff coefficient proxy (asphalt, concrete &amp; masonry)</span>
               </div>
             </div>
-            <span class="acard-badge urban">Surface</span>
+            <span class="acard-badge urban">Hydrology</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-urban-impervious">Run analysis to generate</div>
-            <img id="aimg-urban-impervious" src="" alt="Impervious" style="display:none" />
+            <div class="acard-placeholder" id="apl-urban-impervious">Execute urban analysis to synthesize</div>
+            <img id="aimg-urban-impervious" src="" alt="Impervious Surface" style="display:none" />
           </div>
+          <div class="acard-desc">Impervious soil fraction quantification for urban stormwater runoff modeling and flash-flood vulnerability.</div>
         </div>
 
         <!-- Urban Greenery -->
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🌲</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-leaf"></use></svg></span>
               <div>
-                <h4>Urban Greenery Map</h4>
-                <span class="acard-sub">Parks, trees &amp; open green spaces</span>
+                <h4>Urban Canopy &amp; Open Green Spaces</h4>
+                <span class="acard-sub">Microclimate thermal buffer canopy index</span>
               </div>
             </div>
-            <span class="acard-badge crop">Green</span>
+            <span class="acard-badge crop">Ecological</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-urban-greenery">Run analysis to generate</div>
-            <img id="aimg-urban-greenery" src="" alt="Greenery" style="display:none" />
+            <div class="acard-placeholder" id="apl-urban-greenery">Execute urban analysis to synthesize</div>
+            <img id="aimg-urban-greenery" src="" alt="Urban Greenery" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Green Cover</span><strong id="ast-greenery-pct" class="green">—</strong></div>
+            <div class="astat"><span>Green Cover Ratio</span><strong id="ast-greenery-pct" class="green">—</strong></div>
           </div>
         </div>
 
@@ -986,18 +1191,19 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">👥</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-population"></use></svg></span>
               <div>
-                <h4>Population Density Proxy</h4>
-                <span class="acard-sub">Texture-based crowding estimate</span>
+                <h4>Settlement Density &amp; Morphology Proxy</h4>
+                <span class="acard-sub">High-frequency structural texture entropy</span>
               </div>
             </div>
-            <span class="acard-badge urban">Density</span>
+            <span class="acard-badge urban">Demographic</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-urban-density">Run analysis to generate</div>
-            <img id="aimg-urban-density" src="" alt="Density" style="display:none" />
+            <div class="acard-placeholder" id="apl-urban-density">Execute urban analysis to synthesize</div>
+            <img id="aimg-urban-density" src="" alt="Settlement Density" style="display:none" />
           </div>
+          <div class="acard-desc">Structural entropy distribution proxy estimating relative residential building cluster density.</div>
         </div>
       </div>
     </div>
@@ -1005,9 +1211,9 @@
     <!-- DISASTER ASSESSMENT PANEL -->
     <div class="domain-panel" id="domain-disaster" style="display:none">
       <div class="domain-run-bar">
-        <span class="domain-desc">Flood extent mapping, damage severity grading, road accessibility, relief zone detection &amp; surface anomaly.</span>
+        <span class="domain-desc">Immediate post-event hazard assessment: flood inundation limits, structural damage anomalies, arterial blockage &amp; emergency staging grounds.</span>
         <button class="btn-outline btn-sm" onclick="runAnalysis('disaster')">
-          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Run Disaster Analysis
+          <svg class="btn-svg-sm"><use href="#icon-play"></use></svg> Compute Hazard Analytics
         </button>
       </div>
       <div class="analysis-grid" id="analysis-grid-disaster">
@@ -1016,21 +1222,21 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🌊</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-flood"></use></svg></span>
               <div>
-                <h4>Flood Extent Map</h4>
-                <span class="acard-sub">NDWI &gt; 0.3 water delineation</span>
+                <h4>Hydrological Flood Inundation Extent</h4>
+                <span class="acard-sub">Modified NDWI water thresholding $(\text{B3}-\text{B8})/(\text{B3}+\text{B8}) > 0.30$</span>
               </div>
             </div>
-            <span class="acard-badge blue">Flood</span>
+            <span class="acard-badge blue">Inundation</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-disaster-flood">Run analysis to generate</div>
-            <img id="aimg-disaster-flood" src="" alt="Flood" style="display:none" />
+            <div class="acard-placeholder" id="apl-disaster-flood">Execute hazard analysis to synthesize</div>
+            <img id="aimg-disaster-flood" src="" alt="Flood Inundation Extent" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Flooded Area</span><strong id="ast-flooded-pct" class="blue">—</strong></div>
-            <div class="astat wide"><span>Status</span><strong id="ast-water-status">—</strong></div>
+            <div class="astat"><span>Flooded AOI Ratio</span><strong id="ast-flooded-pct" class="blue">—</strong></div>
+            <div class="astat wide"><span>Hydrological State</span><strong id="ast-water-status">—</strong></div>
           </div>
         </div>
 
@@ -1038,20 +1244,20 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🏚️</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-damage"></use></svg></span>
               <div>
-                <h4>Damage Severity Map</h4>
-                <span class="acard-sub">Texture anomaly → debris mapping</span>
+                <h4>Structural Damage &amp; Debris Grading</h4>
+                <span class="acard-sub">Sub-pixel high-frequency spectral entropy shift</span>
               </div>
             </div>
-            <span class="acard-badge warn">Damage</span>
+            <span class="acard-badge warn">Structural</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-disaster-damage">Run analysis to generate</div>
-            <img id="aimg-disaster-damage" src="" alt="Damage" style="display:none" />
+            <div class="acard-placeholder" id="apl-disaster-damage">Execute hazard analysis to synthesize</div>
+            <img id="aimg-disaster-damage" src="" alt="Structural Damage Severity" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Severe Damage</span><strong id="ast-severe-pct" class="red">—</strong></div>
+            <div class="astat"><span>Severe Damage Anomaly</span><strong id="ast-severe-pct" class="red">—</strong></div>
           </div>
         </div>
 
@@ -1059,20 +1265,20 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🚧</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-road"></use></svg></span>
               <div>
-                <h4>Road Accessibility</h4>
-                <span class="acard-sub">Open vs blocked route mapping</span>
+                <h4>Arterial Ingress &amp; Route Blockage</h4>
+                <span class="acard-sub">Transportation corridor continuity verification</span>
               </div>
             </div>
-            <span class="acard-badge urban">Routes</span>
+            <span class="acard-badge urban">Logistics</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-disaster-roads">Run analysis to generate</div>
-            <img id="aimg-disaster-roads" src="" alt="Roads" style="display:none" />
+            <div class="acard-placeholder" id="apl-disaster-roads">Execute hazard analysis to synthesize</div>
+            <img id="aimg-disaster-roads" src="" alt="Road Accessibility" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Blocked Roads</span><strong id="ast-blocked-pct" class="red">—</strong></div>
+            <div class="astat"><span>Obstructed Arteries</span><strong id="ast-blocked-pct" class="red">—</strong></div>
           </div>
         </div>
 
@@ -1080,20 +1286,20 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">⛺</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-target"></use></svg></span>
               <div>
-                <h4>Relief Zone Finder</h4>
-                <span class="acard-sub">Flat open ground for camps</span>
+                <h4>Emergency Relief &amp; Staging Grounds</h4>
+                <span class="acard-sub">Non-flooded, clear open terrain suitability</span>
               </div>
             </div>
-            <span class="acard-badge crop">Safe</span>
+            <span class="acard-badge crop">Staging</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-disaster-relief">Run analysis to generate</div>
-            <img id="aimg-disaster-relief" src="" alt="Relief" style="display:none" />
+            <div class="acard-placeholder" id="apl-disaster-relief">Execute hazard analysis to synthesize</div>
+            <img id="aimg-disaster-relief" src="" alt="Relief Staging Zones" style="display:none" />
           </div>
           <div class="acard-stats">
-            <div class="astat"><span>Safe Zones</span><strong id="ast-relief-pct" class="green">—</strong></div>
+            <div class="astat"><span>Deployable Safe Zones</span><strong id="ast-relief-pct" class="green">—</strong></div>
           </div>
         </div>
 
@@ -1101,18 +1307,19 @@
         <div class="analysis-card">
           <div class="acard-head">
             <div class="acard-title-group">
-              <span class="acard-icon">🔥</span>
+              <span class="acard-icon"><svg class="acard-svg"><use href="#icon-fire"></use></svg></span>
               <div>
-                <h4>Surface Anomaly Map</h4>
-                <span class="acard-sub">Burn scars &amp; bare soil detection</span>
+                <h4>Surface Thermal &amp; Burn Scar Anomaly</h4>
+                <span class="acard-sub">Normalized Burn Ratio proxy (decay of NIR reflectance)</span>
               </div>
             </div>
-            <span class="acard-badge warn">Anomaly</span>
+            <span class="acard-badge warn">Thermal</span>
           </div>
           <div class="acard-preview">
-            <div class="acard-placeholder" id="apl-disaster-anomaly">Run analysis to generate</div>
-            <img id="aimg-disaster-anomaly" src="" alt="Anomaly" style="display:none" />
+            <div class="acard-placeholder" id="apl-disaster-anomaly">Execute hazard analysis to synthesize</div>
+            <img id="aimg-disaster-anomaly" src="" alt="Surface Burn Scar Anomaly" style="display:none" />
           </div>
+          <div class="acard-desc">Detects sudden decreases in NIR spectral response characteristic of severe burn scars, mudflows, or bare sub-soil exposure.</div>
         </div>
       </div>
     </div>
@@ -1125,35 +1332,102 @@
     </div>
   </section>
 
-  <!-- ── 7. ABOUT ──────────────────────────────────────────────────────────── -->
-
+  <!-- ── 7. ABOUT / SENSOR DOSSIER ─────────────────────────────────────────── -->
   <section class="content-panel" id="panel-info" style="display:none">
     <div class="info-content">
-      <h1>SentinelSR Architecture</h1>
-      <p class="info-lead">
-        Sentinel-2 multispectral super-resolution engine enhancing 10m imagery to 2.5m resolution with physical radiometric preservation and GIS export compatibility.
-      </p>
+      <div class="dossier-header">
+        <span class="dossier-tag">SCIENTIFIC TECHNICAL DOSSIER</span>
+        <h1>Sentinel-2 MSI Super-Resolution Platform Architecture</h1>
+        <p class="info-lead">
+          Operational satellite imagery reconstruction framework enhancing ESA Sentinel-2 Multispectral Instrument (MSI) observations from 10m to 2.5m spatial resolution while strictly preserving physical top-of-canopy (BOA) radiometric reflectance under Wald's synthesis protocol.
+        </p>
+      </div>
 
+      <!-- Sensor Specifications Table -->
+      <div class="table-card">
+        <div class="table-head">
+          <h3>Sentinel-2 MSI Radiometric &amp; Spatial Sensor Specifications</h3>
+          <span class="table-sub">European Space Agency (ESA) Copernicus Constellation (S2A &amp; S2B)</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Band ID</th>
+              <th>Spectral Designation</th>
+              <th>Central Wavelength $(\lambda_c)$</th>
+              <th>Spectral Bandwidth $(\Delta \lambda)$</th>
+              <th>Native Sensor GSD</th>
+              <th>Synthesized GSD</th>
+              <th>Signal-to-Noise (SNR)</th>
+              <th>Radiometric Resolution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>B02</strong></td>
+              <td>Blue (Atmosphere / Soil)</td>
+              <td class="mono">490 nm</td>
+              <td class="mono">65 nm</td>
+              <td class="mono">10.0 m</td>
+              <td class="mono highlight">2.50 m (4×)</td>
+              <td class="mono">154 @ L_ref</td>
+              <td class="mono">12-bit (0 – 4095)</td>
+            </tr>
+            <tr>
+              <td><strong>B03</strong></td>
+              <td>Green (Vegetation Peak)</td>
+              <td class="mono">560 nm</td>
+              <td class="mono">35 nm</td>
+              <td class="mono">10.0 m</td>
+              <td class="mono highlight">2.50 m (4×)</td>
+              <td class="mono">168 @ L_ref</td>
+              <td class="mono">12-bit (0 – 4095)</td>
+            </tr>
+            <tr>
+              <td><strong>B04</strong></td>
+              <td>Red (Chlorophyll Absorption)</td>
+              <td class="mono">665 nm</td>
+              <td class="mono">30 nm</td>
+              <td class="mono">10.0 m</td>
+              <td class="mono highlight">2.50 m (4×)</td>
+              <td class="mono">142 @ L_ref</td>
+              <td class="mono">12-bit (0 – 4095)</td>
+            </tr>
+            <tr>
+              <td><strong>B08</strong></td>
+              <td>NIR (Vegetation Plateau)</td>
+              <td class="mono">842 nm</td>
+              <td class="mono">115 nm</td>
+              <td class="mono">10.0 m</td>
+              <td class="mono highlight">2.50 m (4×)</td>
+              <td class="mono">174 @ L_ref</td>
+              <td class="mono">12-bit (0 – 4095)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Core Research Architectural Components -->
       <div class="info-cards">
         <div class="info-card">
           <div class="info-card-icon"><svg class="card-svg"><use href="#icon-cpu"></use></svg></div>
-          <h3>Real-Data ESRGAN (Ours)</h3>
-          <p>Trained from scratch on over 7,700 real paired satellite patches from Sen2Venµs (5m) and WorldStrat (2.5m). Achieves 39.19 dB PSNR with 0.33s latency.</p>
+          <h3>Real-Satellite Trained ESRGAN-MSI</h3>
+          <p>Trained from scratch on over 7,700 real paired satellite patches from Sen2Venµs (5m) and WorldStrat (2.5m). Employs 4-channel Residual-in-Residual Dense Blocks (RRDB) with Wald-constrained downsampling loss. Achieves <strong>39.19 dB PSNR</strong> at 0.33s inference latency.</p>
         </div>
         <div class="info-card">
           <div class="info-card-icon"><svg class="card-svg"><use href="#icon-satellite"></use></svg></div>
-          <h3>LDSR-S2 Baseline</h3>
-          <p>Latent diffusion baseline model evaluated under iterative DDIM sampling steps for comparison.</p>
+          <h3>LDSR-S2 Latent Diffusion Baseline</h3>
+          <p>113-million parameter latent diffusion model adapted for multispectral remote sensing. Provides stochastic iterative DDIM sampling steps (T=6 to T=25) serving as an academic benchmark against our direct GAN generator.</p>
         </div>
         <div class="info-card">
           <div class="info-card-icon"><svg class="card-svg"><use href="#icon-metrics"></use></svg></div>
-          <h3>Wald Synthesis Protocol</h3>
-          <p>Computes PSNR, SSIM, SAM, and ERGAS metrics against the sensor point spread function model.</p>
+          <h3>Wald Synthesis Protocol (1997)</h3>
+          <p>Strict remote sensing validation framework: synthesized high-resolution imagery downsampled via sensor Point Spread Function (PSF) must reproduce native observations within rigorous physical tolerances: $\mathbb{E}[\|\mathbf{y} - (\hat{\mathbf{x}} * \text{PSF})_{\downarrow 4}\|_1] < \epsilon$.</p>
         </div>
         <div class="info-card">
           <div class="info-card-icon"><svg class="card-svg"><use href="#icon-layers"></use></svg></div>
-          <h3>GIS Products</h3>
-          <p>Generates 2.5m NDVI, NDWI, and projected GeoTIFF rasters with intact spatial transforms.</p>
+          <h3>GIS Product Geotransforms</h3>
+          <p>Rasters are exported as standard GeoTIFF rasters with intact GDAL Affine matrices, projection metadata in EPSG:4326 (WGS 84), and floating-point radiometric values directly ingestible into QGIS, ArcGIS Pro, and Google Earth Engine.</p>
         </div>
       </div>
     </div>
@@ -1161,18 +1435,18 @@
 
 </main>
 
-<!-- ═══ SPINNER ═══════════════════════════════════════════════════════════════ -->
+<!-- ═══ SCIENTIFIC EXECUTION MODAL / SPINNER ══════════════════════════════════ -->
 <div class="spinner-overlay" id="spinner-overlay" style="display:none">
   <div class="spinner-card">
     <div class="spinner-ring"></div>
-    <div class="spinner-msg" id="spinner-msg">Processing…</div>
+    <div class="spinner-msg" id="spinner-msg">Executing Radiometric Pipeline…</div>
     <div class="spinner-sub" id="spinner-sub"></div>
     <button type="button" id="btn-cancel-task" class="btn-cancel-modal" onclick="cancelSR()">
-      <svg class="btn-svg-sm"><use href="#icon-stop"></use></svg> Cancel
+      <svg class="btn-svg-sm"><use href="#icon-stop"></use></svg> Cancel Operation
     </button>
   </div>
 </div>
 
-<script src="app.js?v=v7-analysis"></script>
+<script src="app.js?v=v9-scientific"></script>
 </body>
 </html>

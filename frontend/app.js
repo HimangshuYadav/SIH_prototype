@@ -31,6 +31,35 @@ const PRESETS = [
 // ══════════════════════════════════════════════════════════════
 // MAP INITIALIZATION
 // ══════════════════════════════════════════════════════════════
+function formatDms(deg, isLat) {
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = ((abs - d - m/60) * 3600).toFixed(1);
+  const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+  return `${d}°${m}'${s}" ${dir}`;
+}
+
+function getUtmZone(lng) {
+  return Math.floor((lng + 180) / 6) + 1;
+}
+
+function updateAoiMetrics(w, s, e, n) {
+  w = parseFloat(w); s = parseFloat(s); e = parseFloat(e); n = parseFloat(n);
+  if (isNaN(w) || isNaN(s) || isNaN(e) || isNaN(n)) return;
+  const midLat = (s + n) / 2;
+  const latKmPerDeg = 111.32;
+  const lonKmPerDeg = 111.32 * Math.cos(midLat * Math.PI / 180);
+  const widthKm = Math.abs(e - w) * lonKmPerDeg;
+  const heightKm = Math.abs(n - s) * latKmPerDeg;
+  const areaKm2 = widthKm * heightKm;
+  const areaHa = areaKm2 * 100;
+  const dimEl = document.getElementById('aoi-dim');
+  const areaEl = document.getElementById('aoi-area');
+  if (dimEl) dimEl.textContent = `${widthKm.toFixed(2)} km × ${heightKm.toFixed(2)} km`;
+  if (areaEl) areaEl.textContent = `${areaKm2.toFixed(2)} km² (${Math.round(areaHa).toLocaleString()} ha)`;
+}
+
 function initMap() {
   map = L.map('map', {
     center: [20.5937, 78.9629],
@@ -38,20 +67,23 @@ function initMap() {
     zoomControl: true,
   });
 
+  // Scientific metric scale bar
+  L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
+
+  const positronLayer = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    {
+      attribution: '© CartoDB / OpenStreetMap',
+      maxZoom: 19,
+      subdomains: 'abcd',
+    }
+  );
+
   const s2Layer = L.tileLayer(
     'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg',
     {
       attribution: '© Sentinel-2 cloudless by EOX IT Services GmbH',
       maxZoom: 18,
-    }
-  );
-
-  const darkLayer = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    {
-      attribution: '© CartoDB / OpenStreetMap',
-      maxZoom: 19,
-      subdomains: 'abcd',
     }
   );
 
@@ -63,12 +95,22 @@ function initMap() {
     }
   );
 
-  s2Layer.addTo(map);
+  const osmLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }
+  );
+
+  // Default to clean scientific cartographic base
+  positronLayer.addTo(map);
 
   const baseLayers = {
-    'Sentinel-2 (10m BOA)': s2Layer,
-    'Carto Dark Canvas': darkLayer,
-    'High-Res Satellite': esriLayer,
+    'Carto Positron (Technical)': positronLayer,
+    'Sentinel-2 Cloudless (10m BOA)': s2Layer,
+    'High-Res Satellite (Esri)': esriLayer,
+    'OpenStreetMap Carto': osmLayer,
   };
 
   L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
@@ -80,9 +122,11 @@ function initMap() {
     const lng = e.latlng.lng;
     const latDir = lat >= 0 ? 'N' : 'S';
     const lngDir = lng >= 0 ? 'E' : 'W';
+    const dms = `${formatDms(lat, true)}, ${formatDms(lng, false)}`;
+    const utm = `UTM Zone ${getUtmZone(lng)}N`;
     const readout = document.getElementById('coord-readout');
     if (readout) {
-      readout.textContent = `${Math.abs(lat).toFixed(3)}° ${latDir}, ${Math.abs(lng).toFixed(3)}° ${lngDir}`;
+      readout.textContent = `${Math.abs(lat).toFixed(3)}° ${latDir}, ${Math.abs(lng).toFixed(3)}° ${lngDir} (${dms}) · ${utm}`;
     }
   });
 
@@ -97,14 +141,36 @@ function initMap() {
     drawnItems.clearLayers();
     drawnItems.addLayer(e.layer);
     const b = e.layer.getBounds();
-    document.getElementById('bbox-west').value  = b.getWest().toFixed(4);
-    document.getElementById('bbox-south').value = b.getSouth().toFixed(4);
-    document.getElementById('bbox-east').value  = b.getEast().toFixed(4);
-    document.getElementById('bbox-north').value = b.getNorth().toFixed(4);
+    const w = b.getWest().toFixed(4);
+    const s = b.getSouth().toFixed(4);
+    const eLng = b.getEast().toFixed(4);
+    const n = b.getNorth().toFixed(4);
+    document.getElementById('bbox-west').value  = w;
+    document.getElementById('bbox-south').value = s;
+    document.getElementById('bbox-east').value  = eLng;
+    document.getElementById('bbox-north').value = n;
+    updateAoiMetrics(w, s, eLng, n);
     setDrawMode(false);
     hideHint();
-    log('[AOI] Bounds selected. Ready to fetch tile.', 'ok');
+    log('[AOI] Bounds selected. Footprint computed.', 'ok');
   });
+
+  // Attach input listeners for bounding box manual entry
+  ['bbox-west', 'bbox-south', 'bbox-east', 'bbox-north'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', function() {
+        const w = document.getElementById('bbox-west').value;
+        const s = document.getElementById('bbox-south').value;
+        const eLng = document.getElementById('bbox-east').value;
+        const n = document.getElementById('bbox-north').value;
+        updateAoiMetrics(w, s, eLng, n);
+      });
+    }
+  });
+
+  // Initialize with default Hyderabad dimensions
+  updateAoiMetrics(78.3692, 17.3850, 78.4800, 17.4800);
 
   buildPresets();
   initPixelProbe();
@@ -168,19 +234,20 @@ function applyPreset(p) {
   document.getElementById('bbox-south').value = s;
   document.getElementById('bbox-east').value  = e;
   document.getElementById('bbox-north').value = n;
+  updateAoiMetrics(w, s, e, n);
 
   drawnItems.clearLayers();
   const rect = L.rectangle([[s, w], [n, e]], {
-    color: '#0ea5e9',
+    color: '#0284c7',
     weight: 2,
-    fillColor: '#0ea5e9',
+    fillColor: '#0284c7',
     fillOpacity: 0.12,
     dashArray: '6 4',
   });
   drawnItems.addLayer(rect);
   map.fitBounds([[s, w], [n, e]], { padding: [50, 50] });
   hideHint();
-  log('[PRESET] Selected ' + p.label, 'ok');
+  log('[PRESET] Selected ' + p.label + ' · Footprint calculated', 'ok');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -485,18 +552,50 @@ function initPixelProbe() {
     const normX = Math.sin(x * Math.PI * 2.5);
     const normY = Math.cos(y * Math.PI * 2.0);
     
-    const rRed   = Math.max(0.02, Math.min(0.38, 0.12 + 0.08 * normX + 0.04 * normY));
-    const rGreen = Math.max(0.03, Math.min(0.42, 0.14 + 0.06 * normX + 0.05 * normY));
-    const rBlue  = Math.max(0.01, Math.min(0.28, 0.09 + 0.04 * normX + 0.03 * normY));
-    const rNir   = Math.max(0.04, Math.min(0.72, 0.42 + 0.18 * normY - 0.06 * normX));
+    const rRed   = Math.max(0.02, Math.min(0.48, 0.12 + 0.08 * normX + 0.04 * normY));
+    const rGreen = Math.max(0.03, Math.min(0.52, 0.14 + 0.06 * normX + 0.05 * normY));
+    const rBlue  = Math.max(0.01, Math.min(0.35, 0.09 + 0.04 * normX + 0.03 * normY));
+    const rNir   = Math.max(0.04, Math.min(0.85, 0.42 + 0.22 * normY - 0.06 * normX));
 
     const ndvi = (rNir - rRed) / (rNir + rRed + 1e-6);
 
-    document.getElementById('pi-b4').textContent   = rRed.toFixed(3);
-    document.getElementById('pi-b3').textContent   = rGreen.toFixed(3);
-    document.getElementById('pi-b2').textContent   = rBlue.toFixed(3);
-    document.getElementById('pi-b8').textContent   = rNir.toFixed(3);
-    document.getElementById('pi-ndvi').textContent = (ndvi >= 0 ? '+' : '') + ndvi.toFixed(3);
+    const elB4 = document.getElementById('pi-b4');
+    const elB3 = document.getElementById('pi-b3');
+    const elB2 = document.getElementById('pi-b2');
+    const elB8 = document.getElementById('pi-b8');
+    const elNdvi = document.getElementById('pi-ndvi');
+
+    if (elB4) elB4.textContent = rRed.toFixed(3);
+    if (elB3) elB3.textContent = rGreen.toFixed(3);
+    if (elB2) elB2.textContent = rBlue.toFixed(3);
+    if (elB8) elB8.textContent = rNir.toFixed(3);
+    if (elNdvi) elNdvi.textContent = (ndvi >= 0 ? '+' : '') + ndvi.toFixed(3);
+
+    // Update spectrometer visual bars
+    const barB2 = document.getElementById('pi-bar-b2');
+    const barB3 = document.getElementById('pi-bar-b3');
+    const barB4 = document.getElementById('pi-bar-b4');
+    const barB8 = document.getElementById('pi-bar-b8');
+    if (barB2) barB2.style.width = Math.round(rBlue * 100) + '%';
+    if (barB3) barB3.style.width = Math.round(rGreen * 100) + '%';
+    if (barB4) barB4.style.width = Math.round(rRed * 100) + '%';
+    if (barB8) barB8.style.width = Math.round(rNir * 100) + '%';
+
+    // Update NDVI spectrum needle & classification tag
+    const needleEl = document.getElementById('pi-ndvi-needle');
+    const classEl  = document.getElementById('pi-ndvi-class');
+    if (needleEl) {
+      const pct = Math.max(0, Math.min(100, ((ndvi + 0.2) / 1.05) * 100));
+      needleEl.style.left = pct + '%';
+    }
+    if (classEl) {
+      let cls = 'Dense Vigor';
+      if (ndvi < 0) cls = 'Water / Shadow';
+      else if (ndvi < 0.2) cls = 'Barren / Non-Veg';
+      else if (ndvi < 0.4) cls = 'Sparse Canopy';
+      else if (ndvi < 0.65) cls = 'Moderate Canopy';
+      classEl.textContent = cls;
+    }
   });
 }
 
