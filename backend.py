@@ -1719,4 +1719,18 @@ app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend:app", host="0.0.0.0", port=8000, reload=False, log_level="info")
+    import socket
+    import os
+
+    def get_free_port(preferred):
+        if "PORT" in os.environ:
+            return int(os.environ["PORT"])
+        for p in [preferred, 8001, 8080, 8888]:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(("127.0.0.1", p)) != 0:
+                    return p
+        return preferred
+
+    port = get_free_port(8000)
+    print(f"\n🚀 SentinelSR running at: http://localhost:{port}\n")
+    uvicorn.run("backend:app", host="0.0.0.0", port=port, reload=False, log_level="info")
